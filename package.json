@@ -1,0 +1,22 @@
+{
+  "name": "hall-twitter-streamer",
+  "version": "0.0.0",
+  "description": "Backend Twitter Streamer ========================",
+  "main": "index.js",
+  "dependencies": {
+    "ntwitter": "~0.5.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/greenham/hall-twitter-streamer.git"
+  },
+  "author": "",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/greenham/hall-twitter-streamer/issues"
+  }
+}

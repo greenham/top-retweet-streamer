@@ -1,5 +1,7 @@
 Backend Twitter Streamer
-* For this project, build a backend twitter top 10 retweets streamer with the following conditions:
+========================
+
+A Twitter top 10 retweets streamer with the following conditions:
 
 The backend should:
 * Analyze a filtered statuses stream from twitter to determine the top 10 re-tweets.
