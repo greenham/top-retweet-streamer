@@ -1,7 +1,7 @@
 var twitter     = require('ntwitter');
 var MongoClient = require('mongodb').MongoClient;
 
-var query       = '#HipHopAwards';
+var query       = '#EndThisNow';
 
 // Connect to the db
 MongoClient.connect("mongodb://localhost:27017/retweets", function(err, db) {
@@ -30,7 +30,7 @@ MongoClient.connect("mongodb://localhost:27017/retweets", function(err, db) {
 
 		retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
 			// @todo list existing results for this query (if any)
-			console.log(result);
+			//console.log(result);
 			twit.stream('statuses/filter', {'track':query}, function(stream) {
 				stream
 					.on('data', function (tweet) {
@@ -42,11 +42,11 @@ MongoClient.connect("mongodb://localhost:27017/retweets", function(err, db) {
 								retweet_count: tweet.retweeted_status.retweet_count,
 								text: tweet.retweeted_status.text
 							};
-							retweets.update({tweet_id: tweet.retweeted_status.id}, newTweet, {upsert: true, w: 1}, function(err, result) {console.log(err);});
+							retweets.update({tweet_id: tweet.retweeted_status.id}, newTweet, {upsert: true, w: 1}, function(err, result) {});
 						}
 					})
 					.on('error', function(e) {
-						console.log(e);
+						console.log('Twitter stream error: ' + e);
 						process.exit();
 					});
 			});
