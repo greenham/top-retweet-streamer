@@ -1,7 +1,7 @@
 var twitter     = require('ntwitter');
 var MongoClient = require('mongodb').MongoClient;
 
-var filterQuery  = 'debt ceiling';
+var filterQuery  = 'Obama';
 var pollInterval = 5000;
 
 // Connect to the db
@@ -24,51 +24,51 @@ MongoClient.connect("mongodb://localhost:27017/retweets", function(err, db) {
 			rtOpts   = {limit: 10, sort: [["retweet_count", "desc"]]};
 
 	var displayTweets = function(tweets) {
-		var i = 1;
+		var rank = 1;
 		tweets.each(function(err, tweet) {
 			if ( ! err && tweet !== null) {
-				console.log(i+'.\t['+tweet.retweet_count+' RTs]\t@'+tweet.screen_name+': '+tweet.text.replace(/(\r\n|\r|\n)/gm,''));
-				i++;
+				console.log(rank+'.\t['+tweet.retweet_count+' RTs]\t@'+tweet.screen_name+': '+tweet.text.replace(/(\r\n|\r|\n)/gm,''));
+				rank++;
 			}
 		});
 	};
 
 	console.log('\033[2JTracking Top 10 Retweets for: ' + filterQuery);
 
+  // For a filter that has already has been requested before, return the previous top 10 standings as the first packet.
 	retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
-		// list existing results for this query (if any)
 		if (result) {
 			displayTweets(result);
 		}
+	});
 
-		twit.stream('statuses/filter', {'track':filterQuery}, function(stream) {
-			stream
-				.on('data', function (tweet) {
-					if (tweet.retweeted_status && tweet.retweeted_status.retweet_count > 0) {
-						var newTweet = {
-							query: filterQuery,
-							tweet_id: tweet.retweeted_status.id,
-							screen_name: tweet.retweeted_status.user.screen_name,
-							retweet_count: tweet.retweeted_status.retweet_count,
-							text: tweet.retweeted_status.text
-						};
-						retweets.update({tweet_id: tweet.retweeted_status.id}, newTweet, {upsert: true}, function(err, result) {});
-					}
-				})
-				.on('error', function(e) {
-					console.log('Twitter stream error: ' + e);
-					process.exit();
-				});
+	twit.stream('statuses/filter', {'track':filterQuery}, function(stream) {
+		stream
+			.on('data', function (tweet) {
+				if (tweet.retweeted_status && tweet.retweeted_status.retweet_count > 0) {
+					var newTweet = {
+						query: filterQuery,
+						tweet_id: tweet.retweeted_status.id,
+						screen_name: tweet.retweeted_status.user.screen_name,
+						retweet_count: tweet.retweeted_status.retweet_count,
+						text: tweet.retweeted_status.text
+					};
+					retweets.update({tweet_id: tweet.retweeted_status.id}, newTweet, {upsert: true}, function(err, result) {});
+				}
+			})
+			.on('error', function(e) {
+				console.log('Twitter stream error: ' + e);
+				process.exit();
+			});
 
-			// poll for new top 10 every 10 seconds...
-			setInterval(function() {
-				retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
-					if (result) {
-						console.log('\033[2JTracking Top 10 Retweets for: ' + filterQuery);
-						displayTweets(result);
-					}
-				});
-			}, pollInterval);
-		});
+		// poll for new top 10 every 10 seconds...
+		setInterval(function() {
+			retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
+				if (result) {
+					console.log('\033[2JTracking Top 10 Retweets for: ' + filterQuery);
+					displayTweets(result);
+				}
+			});
+		}, pollInterval);
 	});
 });
