@@ -1,7 +1,8 @@
 var twitter     = require('ntwitter');
 var MongoClient = require('mongodb').MongoClient;
 
-var filterQuery = 'bieber';
+var filterQuery  = 'debt ceiling';
+var pollInterval = 5000;
 
 // Connect to the db
 MongoClient.connect("mongodb://localhost:27017/retweets", function(err, db) {
@@ -22,19 +23,22 @@ MongoClient.connect("mongodb://localhost:27017/retweets", function(err, db) {
 			rtFields = {screen_name: true, retweet_count: true, text: true},
 			rtOpts   = {limit: 10, sort: [["retweet_count", "desc"]]};
 
-	console.log('\033[2J');
-	console.log('Finding Top 10 Retweets for: ' + filterQuery);
+	var displayTweets = function(tweets) {
+		var i = 1;
+		tweets.each(function(err, tweet) {
+			if ( ! err && tweet !== null) {
+				console.log(i+'.\t['+tweet.retweet_count+' RTs]\t@'+tweet.screen_name+': '+tweet.text.replace(/(\r\n|\r|\n)/gm,''));
+				i++;
+			}
+		});
+	};
+
+	console.log('\033[2JTracking Top 10 Retweets for: ' + filterQuery);
 
 	retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
 		// list existing results for this query (if any)
 		if (result) {
-			var i = 1;
-			result.each(function(err, tweet) {
-				if ( ! err && tweet !== null) {
-					console.log(i+'. ['+tweet.retweet_count+' RTs] @'+tweet.screen_name+': '+tweet.text.replace('\n',''));
-					i++;
-				}
-			});
+			displayTweets(result);
 		}
 
 		twit.stream('statuses/filter', {'track':filterQuery}, function(stream) {
@@ -55,23 +59,16 @@ MongoClient.connect("mongodb://localhost:27017/retweets", function(err, db) {
 					console.log('Twitter stream error: ' + e);
 					process.exit();
 				});
-				// poll for new top 10 every 10 seconds...
-				setInterval(function() {
-					console.log('\033[2J');
-					retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
-						if (result) {
-							console.log('\033[2J');
-							console.log('Top 10 Retweets for: ' + filterQuery);
-							var i = 1;
-							result.each(function(err, tweet) {
-								if ( ! err && tweet !== null) {
-									console.log(i+'. ['+tweet.retweet_count+' RTs] @'+tweet.screen_name+': '+tweet.text.replace('\n',''));
-									i++;
-								}
-							});
-						}
-					});
-				}, 10000);
+
+			// poll for new top 10 every 10 seconds...
+			setInterval(function() {
+				retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
+					if (result) {
+						console.log('\033[2JTracking Top 10 Retweets for: ' + filterQuery);
+						displayTweets(result);
+					}
+				});
+			}, pollInterval);
 		});
 	});
 });
