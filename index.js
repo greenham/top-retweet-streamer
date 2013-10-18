@@ -23,6 +23,7 @@ function handler (req, res) {
 }
 
 io.sockets.on('connection', function (socket) {
+  // @todo handle disconnects/reconnects
   socket.on('filter', function (data, callbackFn) {
     console.log('Received filter request from client: ' + data.query);
     var streamer = new RTStreamer();

@@ -30,7 +30,7 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
 
     var retweets = db.collection('retweets'),
         rtQuery  = {query: filterQuery};
-        rtFields = {screen_name: true, retweet_count: true, text: true},
+        rtFields = {screen_name: true, retweet_count: true, text: true, profile_image_url: true, tweet_id: true},
         rtOpts   = {limit: 10, sort: [["retweet_count", "desc"]]};
 
     var getTopTweets = function() {
@@ -56,6 +56,7 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
               query: filterQuery,
               tweet_id: tweet.retweeted_status.id,
               screen_name: tweet.retweeted_status.user.screen_name,
+              profile_image_url: tweet.retweeted_status.user.profile_image_url,
               retweet_count: tweet.retweeted_status.retweet_count,
               text: tweet.retweeted_status.text
             };

@@ -18,7 +18,7 @@
       /* Custom container */
       .container-narrow {
         margin: 0 auto;
-        max-width: 780px;
+        max-width: 800px;
       }
       .container-narrow > hr {
         margin: 30px 0;
@@ -38,12 +38,8 @@
         padding: 14px 24px;
       }
 
-      /* Supporting marketing content */
-      .marketing {
-        margin: 60px 0;
-      }
-      .marketing p + h4 {
-        margin-top: 28px;
+      .rt-rank {
+        width: 64px;
       }
     </style>
     <link href="/assets/css/bootstrap-responsive.css" rel="stylesheet">
@@ -74,24 +70,20 @@
         <h3 class="muted">Top 10 ReTweet Streamer</h3>
       </div>
 
-      <hr>
-
       <div class="row-fluid hide" id="rt-container">
         <p class="pull-right"><a href="/" class="btn">Start a new search</a></p>
         <p>Tracking top 10 retweets for...</p>
         <h2></h2>
-        <div id="rt-list"></div>
+        <div id="rt-list">Gathering results... please wait...</div>
       </div>
 
       <div class="jumbotron">
         <form class="form-search" id="search-form">
           <p><input type="text" class="input-xlarge search-query" name="search-term"></p>
           <p><button type="submit" class="btn btn-large btn-success">Start Tracking</button></p>
-          <p class="lead">Enter a search, twitter handle, or hashtag to start tracking the top retweets.</p>
+          <p class="lead">Enter a search, twitter handle, or hashtag and start tracking the top retweets in realtime.</p>
         </form>
       </div>
-
-      <hr>
 
       <div class="footer"></div>
 
@@ -107,29 +99,40 @@
       $( document ).ready(function() {
 
         var socket  = io.connect('http://localhost'),
-            rtDiv   = $('#rt-container');
+            rtDiv   = $('#rt-container'),
+            theList = rtDiv.find('#rt-list');
 
+        var formatTweet = function(tweet) {
+          // @todo replace placekitten with twitter profile photo
+          // @todo auto-link URLs in tweet text
+          return '<div class="media" id="tweet-'+tweet.tweet_id+'">\
+              <a class="pull-left" href="https://twitter.com/'+tweet.screen_name+'" target="_blank">\
+                <img class="media-object" alt="@'+tweet.screen_name+'" style="width: 48px; height: 48px;" src="'+tweet.profile_image_url+'">\
+              </a>\
+              <div class="media-body">\
+                <h3 class="pull-right rt-rank">#'+tweet.rank+'</h3>\
+                <span class="pull-right badge badge-success">'+tweet.retweet_count.toLocaleString()+' RTs</span>\
+                <h4 class="media-heading"><a href="https://twitter.com/'+tweet.screen_name+'" target="_blank">@'+tweet.screen_name+'</a></h4>\
+                '+tweet.text+'\
+              </div>\
+            </div>';
+        };
+
+        // @todo handle disconnects/reconnects (re-emit filter if necessary)
         socket.on('data', function(tweets) {
-          var theList = rtDiv.find('#rt-list');
-          theList.fadeOut('fast', function() {
-            theList.html('');
-            $.each(tweets, function(index, tweet) {
-              //theList.append($('<li>['+tweet.retweet_count+' RTs] @'+tweet.screen_name+': '+tweet.text+'</li>'));
-              var newTweet = $('<div></div>');
-              newTweet.html('<div class="media">\
-                  <a class="pull-left" href="https://twitter.com/'+tweet.screen_name+'" target="_blank">\
-                    <img class="media-object" alt="64x64" style="width: 64px; height: 64px;" src="http://placekitten.com/64/64">\
-                  </a>\
-                  <div class="media-body">\
-                    <span class="pull-right badge badge-success">'+tweet.retweet_count+' RTs</span>\
-                    <h4 class="media-heading"><a href="https://twitter.com/'+tweet.screen_name+'" target="_blank">\@'+tweet.screen_name+'</a></h4>\
-                    '+tweet.text+'\
-                  </div>\
-                </div>');
-              theList.append(newTweet);
-            });
-            theList.fadeIn();
-          })
+          // @todo only update the view if the data has actually changed
+          if (tweets.length > 0) {
+            theList.fadeOut('fast', function() {
+              theList.html('');
+              $.each(tweets, function(index, tweet) {
+                tweet.rank = index+1;
+                var newTweet = $('<div></div>');
+                newTweet.html(formatTweet(tweet));
+                theList.append(newTweet);
+              });
+              theList.fadeIn();
+            })
+          }
         });
 
         $('#search-form').on('submit', function(e) {
@@ -139,7 +142,10 @@
             socket.emit('filter', { query: searchTerm }, function() {
               searchForm.fadeOut('fast', function() {
                 rtDiv.find('h2').html(searchTerm);
-                rtDiv.fadeIn();
+                // @todo add waiting indicator
+                $('.masthead').fadeOut(function() {
+                  rtDiv.fadeIn();
+                });
               });
             });
             return false;
