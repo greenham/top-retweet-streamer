@@ -18,8 +18,7 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
   // connect to the DB
   MongoClient.connect("mongodb://localhost:27017/retweets", function(err, db) {
     if (err) {
-      console.error('Could not connect to database: ' + err);
-      process.exit();
+      self.emit('error', err);
     }
 
     var twit = new twitter({
@@ -34,27 +33,20 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
         rtFields = {screen_name: true, retweet_count: true, text: true},
         rtOpts   = {limit: 10, sort: [["retweet_count", "desc"]]};
 
-    var displayTweets = function(tweets) {
-      var rank = 1;
-      tweets.each(function(err, tweet) {
-        if ( ! err && tweet !== null) {
-          console.log(rank+'.\t['+tweet.retweet_count+' RTs]\t@'+tweet.screen_name+': '+tweet.text.replace(/(\r\n|\r|\n)/gm,''));
-          rank++;
+    var getTopTweets = function() {
+      retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
+        if ( ! err && result) {
+          result.toArray(function(err, resultArr) {
+            if ( ! err && resultArr) {
+              self.emit('data', resultArr);
+            }
+          });
         }
       });
     };
 
-    //console.log('\033[2JTracking Top 10 Retweets for: ' + filterQuery);
-
     // For a filter that has already has been requested before, return the previous top 10 standings as the first packet.
-    retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
-      if (result) {
-        //displayTweets(result);
-        result.toArray(function(err, resultArr) {
-          self.emit('data', resultArr);
-        });
-      }
-    });
+    getTopTweets();
 
     twit.stream('statuses/filter', {'track':filterQuery}, function(stream) {
       stream
@@ -71,22 +63,11 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
           }
         })
         .on('error', function(e) {
-          console.log('Twitter stream error: ' + e);
-          process.exit();
+          self.emit('error', e);
         });
 
       // poll for new top 10 every 10 seconds...
-      setInterval(function() {
-        retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
-          if (result) {
-            //console.log('\033[2JTracking Top 10 Retweets for: ' + filterQuery);
-            //displayTweets(result);
-            result.toArray(function(err, resultArr) {
-              self.emit('data', resultArr);
-            });
-          }
-        });
-      }, pollInterval);
+      setInterval(getTopTweets, pollInterval);
     });
   });
 };
