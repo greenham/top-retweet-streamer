@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Twitter Top 10 ReTweet Live Streamer</title>
+    <title>Twitter Top ReTweet Live Streamer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="">
@@ -13,15 +13,6 @@
       body {
         padding-top: 20px;
         padding-bottom: 40px;
-      }
-
-      /* Custom container */
-      .container-narrow {
-        margin: 0 auto;
-        max-width: 800px;
-      }
-      .container-narrow > hr {
-        margin: 30px 0;
       }
 
       /* Main marketing message and sign up button */
@@ -36,6 +27,13 @@
       .jumbotron .btn {
         font-size: 21px;
         padding: 14px 24px;
+      }
+
+      div.media {
+        width: 45%;
+        height: 80px;
+        float: left;
+        margin-left: 10px;
       }
     </style>
     <link href="/assets/css/bootstrap-responsive.css" rel="stylesheet">
@@ -55,21 +53,21 @@
 
   <body>
 
-    <div class="container-narrow">
+    <div class="container">
 
       <div class="masthead">
         <ul class="nav nav-pills pull-right">
           <li class="active"><a href="/">Home</a></li>
-          <li><a href="#">About</a></li>
-          <li><a href="mailto:chrisreidham@gmail.com">Contact</a></li>
+          <li><a href="https://github.com/greenham/top-retweet-streamer" target="_blank">About</a></li>
+          <li><a href="mailto:rtstreamer@greenhamsolutions.com" target="_blank">Contact</a></li>
         </ul>
-        <h3 class="muted">Top 10 ReTweet Streamer</h3>
+        <h3 class="muted">ReTweet Streamer</h3>
       </div>
 
       <div class="row-fluid hide" id="rt-container">
         <p class="pull-right"><a href="/" class="btn">Start a new search</a></p>
-        <p>Tracking top 10 retweets for...</p>
         <h2></h2>
+        <!-- @todo add waiting indicator -->
         <div id="rt-list">Gathering results... please wait...</div>
       </div>
 
@@ -99,36 +97,43 @@
             theList = rtDiv.find('#rt-list');
 
         var formatTweet = function(tweet) {
-          // @todo replace placekitten with twitter profile photo
-          // @todo auto-link URLs in tweet text
-          return '<div class="media" id="tweet-'+tweet.tweet_id+'">\
+          return '<div class="media well" id="tweet-'+tweet.tweet_id+'">\
+              <h3 class="pull-left"><a href="https://twitter.com/'+tweet.screen_name+'/status/'+tweet.tweet_id+'" target="_blank">#'+tweet.rank+'</a></h3>\
               <a class="pull-left" href="https://twitter.com/'+tweet.screen_name+'" target="_blank">\
                 <img class="media-object" alt="@'+tweet.screen_name+'" style="width: 48px; height: 48px;" src="'+tweet.profile_image_url+'">\
               </a>\
               <div class="media-body">\
-                <h3 class="pull-right">#'+tweet.rank+'</h3>\
-                <span class="pull-right badge badge-success">'+tweet.retweet_count.toLocaleString()+' RTs</span>\
-                <h4 class="media-heading"><a href="https://twitter.com/'+tweet.screen_name+'" target="_blank">@'+tweet.screen_name+'</a></h4>\
-                '+tweet.text+'\
+                <h4 class="media-heading">\
+                  <a href="https://twitter.com/'+tweet.screen_name+'" target="_blank">@'+tweet.screen_name+'</a>\
+                  <span class="badge badge-success">'+tweet.retweet_count.toLocaleString()+' RTs</span>\
+                </h4>\
+                <p>'+htmlifyLinks(tweet.text)+'</p>\
               </div>\
             </div>';
+        };
+
+        var htmlifyLinks = function(text) {
+          var exp = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+          return text.replace(exp,'<a href="$1" target="_blank">$1</a>');
         };
 
         // @todo handle disconnects/reconnects (re-emit filter if necessary)
         socket.on('data', function(tweets) {
           // @todo only update the view if the data has actually changed
-          if (tweets.length > 0) {
-            theList.fadeOut('fast', function() {
-              theList.html('');
-              $.each(tweets, function(index, tweet) {
-                tweet.rank = index+1;
-                var newTweet = $('<div></div>');
-                newTweet.html(formatTweet(tweet));
-                theList.append(newTweet);
-              });
-              theList.fadeIn();
-            })
-          }
+          theList.fadeOut('fast', function() {
+            theList.html('');
+            if (tweets.length > 0) {
+                $.each(tweets, function(index, tweet) {
+                  tweet.rank = index+1;
+                  var newTweet = $('<div></div>');
+                  newTweet.html(formatTweet(tweet));
+                  theList.append(newTweet);
+                });
+            } else {
+              theList.html('No retweets found yet... please wait...');
+            }
+            theList.fadeIn();
+          });
         });
 
         $('#search-form').on('submit', function(e) {
@@ -138,7 +143,6 @@
             socket.emit('filter', { query: searchTerm }, function() {
               searchForm.fadeOut('fast', function() {
                 rtDiv.find('h2').html(searchTerm);
-                // @todo add waiting indicator
                 $('.masthead').fadeOut(function() {
                   rtDiv.fadeIn();
                 });

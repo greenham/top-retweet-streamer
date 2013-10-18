@@ -52,15 +52,17 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
       stream
         .on('data', function (tweet) {
           if (tweet.retweeted_status && tweet.retweeted_status.retweet_count > 0) {
+            //console.dir(tweet);
             var newTweet = {
               query: filterQuery,
-              tweet_id: tweet.retweeted_status.id,
+              tweet_id: tweet.retweeted_status.id_str,
               screen_name: tweet.retweeted_status.user.screen_name,
               profile_image_url: tweet.retweeted_status.user.profile_image_url,
               retweet_count: tweet.retweeted_status.retweet_count,
-              text: tweet.retweeted_status.text
+              text: tweet.retweeted_status.text,
+              created_at: tweet.retweeted_status.created_at
             };
-            retweets.update({tweet_id: tweet.retweeted_status.id}, newTweet, {upsert: true}, function(err, result) {});
+            retweets.update({tweet_id: tweet.retweeted_status.id_str}, newTweet, {upsert: true}, function(err, result) {});
           }
         })
         .on('error', function(e) {

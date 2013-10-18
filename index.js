@@ -1,7 +1,8 @@
-var fs  = require('fs'),
+var fs = require('fs'),
+    mime = require('mime'),
     url = require('url'),
     app = require('http').createServer(handler),
-    io  = require('socket.io').listen(app),
+    io = require('socket.io').listen(app),
     RTStreamer = require('./rtstreamer');
 
 function handler (req, res) {
@@ -9,15 +10,13 @@ function handler (req, res) {
   if ( ! path || path == '/') {
     path = '/index.html';
   }
-  // @todo read mime type of file and write Content-Type header appropriately
-  fs.readFile(__dirname + path,
-  function (err, data) {
+  fs.readFile(__dirname + path, function (err, data) {
     if (err) {
-      res.writeHead(500);
-      return res.end('Error loading ' + path);
+      res.writeHead(500, {'Content-Type': 'text/plain'});
+      return res.end('Error loading: ' + path);
     }
 
-    res.writeHead(200);
+    res.writeHead(200, {'Content-Type': mime.lookup(path)});
     res.end(data);
   });
 }
