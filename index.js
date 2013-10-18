@@ -6,6 +6,10 @@ var fs  = require('fs'),
 
 function handler (req, res) {
   var path = url.parse(req.url).path;
+  if ( ! path || path == '/') {
+    path = '/index.html';
+  }
+  // @todo read mime type of file and write Content-Type header appropriately
   fs.readFile(__dirname + path,
   function (err, data) {
     if (err) {
@@ -19,7 +23,7 @@ function handler (req, res) {
 }
 
 io.sockets.on('connection', function (socket) {
-  socket.on('filter', function (data) {
+  socket.on('filter', function (data, callbackFn) {
     console.log('Received filter request from client: ' + data.query);
     var streamer = new RTStreamer();
     streamer
@@ -29,7 +33,8 @@ io.sockets.on('connection', function (socket) {
       .on('error', function(err) {
         socket.emit('error', err);
       });
-    streamer.stream(data.query, 5000);
+    streamer.stream(data.query, 10000);
+    callbackFn();
   });
 });
 

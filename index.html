@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Twitter Top 10 Retweet Live Streamer</title>
+    <title>Twitter Top 10 ReTweet Live Streamer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="">
@@ -18,7 +18,7 @@
       /* Custom container */
       .container-narrow {
         margin: 0 auto;
-        max-width: 700px;
+        max-width: 780px;
       }
       .container-narrow > hr {
         margin: 30px 0;
@@ -67,36 +67,33 @@
 
       <div class="masthead">
         <ul class="nav nav-pills pull-right">
-          <li class="active"><a href="#">Home</a></li>
+          <li class="active"><a href="/">Home</a></li>
           <li><a href="#">About</a></li>
-          <li><a href="#">Contact</a></li>
+          <li><a href="mailto:chrisreidham@gmail.com">Contact</a></li>
         </ul>
-        <h3 class="muted">Top 10 Retweet Streamer</h3>
+        <h3 class="muted">Top 10 ReTweet Streamer</h3>
       </div>
 
       <hr>
 
+      <div class="row-fluid hide" id="rt-container">
+        <p class="pull-right"><a href="/" class="btn">Start a new search</a></p>
+        <p>Tracking top 10 retweets for...</p>
+        <h2></h2>
+        <div id="rt-list"></div>
+      </div>
+
       <div class="jumbotron">
-        <h1></h1>
-        <p class="lead">Enter a search query, twitter handle, or hashtag to start tracking the top retweets.</p>
-        <form class="form-search">
-          <input type="text" class="input-xlarge search-query" id="search-term"><br />
-          <button type="submit" class="btn btn-large btn-success" id="search-btn">Search</button>
+        <form class="form-search" id="search-form">
+          <p><input type="text" class="input-xlarge search-query" name="search-term"></p>
+          <p><button type="submit" class="btn btn-large btn-success">Start Tracking</button></p>
+          <p class="lead">Enter a search, twitter handle, or hashtag to start tracking the top retweets.</p>
         </form>
       </div>
 
       <hr>
 
-      <div class="row-fluid marketing">
-        <ol id="top-rt-list">
-        </ol>
-      </div>
-
-      <hr>
-
-      <div class="footer">
-        <p>&copy; Company 2013</p>
-      </div>
+      <div class="footer"></div>
 
     </div> <!-- /container -->
 
@@ -108,18 +105,43 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
       $( document ).ready(function() {
-        var socket = io.connect('http://localhost');
+
+        var socket  = io.connect('http://localhost'),
+            rtDiv   = $('#rt-container');
+
         socket.on('data', function(tweets) {
-          var theList = $('#top-rt-list');
-          theList.empty();
-          $.each(tweets, function(index, val) {
-            theList.append($('<li>['+val.retweet_count+' RTs] '+val.screen_name+': '+val.text+'</li>'));
-          });
+          var theList = rtDiv.find('#rt-list');
+          theList.fadeOut('fast', function() {
+            theList.html('');
+            $.each(tweets, function(index, tweet) {
+              //theList.append($('<li>['+tweet.retweet_count+' RTs] @'+tweet.screen_name+': '+tweet.text+'</li>'));
+              var newTweet = $('<div></div>');
+              newTweet.html('<div class="media">\
+                  <a class="pull-left" href="https://twitter.com/'+tweet.screen_name+'" target="_blank">\
+                    <img class="media-object" alt="64x64" style="width: 64px; height: 64px;" src="http://placekitten.com/64/64">\
+                  </a>\
+                  <div class="media-body">\
+                    <span class="pull-right badge badge-success">'+tweet.retweet_count+' RTs</span>\
+                    <h4 class="media-heading"><a href="https://twitter.com/'+tweet.screen_name+'" target="_blank">\@'+tweet.screen_name+'</a></h4>\
+                    '+tweet.text+'\
+                  </div>\
+                </div>');
+              theList.append(newTweet);
+            });
+            theList.fadeIn();
+          })
         });
-        $('#search-btn').on('click', function(e) {
+
+        $('#search-form').on('submit', function(e) {
             e.preventDefault();
-            var searchTerm = $('#search-term').val();
-            socket.emit('filter', { query: searchTerm });
+            var searchForm = $(this);
+            var searchTerm = searchForm.find('input[name="search-term"]').val();
+            socket.emit('filter', { query: searchTerm }, function() {
+              searchForm.fadeOut('fast', function() {
+                rtDiv.find('h2').html(searchTerm);
+                rtDiv.fadeIn();
+              });
+            });
             return false;
         });
       });
