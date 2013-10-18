@@ -37,10 +37,6 @@
         font-size: 21px;
         padding: 14px 24px;
       }
-
-      .rt-rank {
-        width: 64px;
-      }
     </style>
     <link href="/assets/css/bootstrap-responsive.css" rel="stylesheet">
 
@@ -79,9 +75,9 @@
 
       <div class="jumbotron">
         <form class="form-search" id="search-form">
+          <h4>Enter a search, twitter handle, or hashtag and start tracking the top retweets in realtime.</h4>
           <p><input type="text" class="input-xlarge search-query" name="search-term"></p>
           <p><button type="submit" class="btn btn-large btn-success">Start Tracking</button></p>
-          <p class="lead">Enter a search, twitter handle, or hashtag and start tracking the top retweets in realtime.</p>
         </form>
       </div>
 
@@ -110,7 +106,7 @@
                 <img class="media-object" alt="@'+tweet.screen_name+'" style="width: 48px; height: 48px;" src="'+tweet.profile_image_url+'">\
               </a>\
               <div class="media-body">\
-                <h3 class="pull-right rt-rank">#'+tweet.rank+'</h3>\
+                <h3 class="pull-right">#'+tweet.rank+'</h3>\
                 <span class="pull-right badge badge-success">'+tweet.retweet_count.toLocaleString()+' RTs</span>\
                 <h4 class="media-heading"><a href="https://twitter.com/'+tweet.screen_name+'" target="_blank">@'+tweet.screen_name+'</a></h4>\
                 '+tweet.text+'\
