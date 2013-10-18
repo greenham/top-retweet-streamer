@@ -79,6 +79,8 @@
         </form>
       </div>
 
+      <!-- @todo show recent searches -->
+
       <div class="footer"></div>
 
     </div> <!-- /container -->
@@ -97,8 +99,11 @@
             theList = rtDiv.find('#rt-list');
 
         var formatTweet = function(tweet) {
+          var tweetDate = new Date(tweet.created_at);
           return '<div class="media well" id="tweet-'+tweet.tweet_id+'">\
-              <h3 class="pull-left"><a href="https://twitter.com/'+tweet.screen_name+'/status/'+tweet.tweet_id+'" target="_blank">#'+tweet.rank+'</a></h3>\
+              <h3 class="pull-left">\
+                <a href="https://twitter.com/'+tweet.screen_name+'/status/'+tweet.tweet_id+'" target="_blank">#'+tweet.rank+'</a>\
+              </h3>\
               <a class="pull-left" href="https://twitter.com/'+tweet.screen_name+'" target="_blank">\
                 <img class="media-object" alt="@'+tweet.screen_name+'" style="width: 48px; height: 48px;" src="'+tweet.profile_image_url+'">\
               </a>\
@@ -106,6 +111,7 @@
                 <h4 class="media-heading">\
                   <a href="https://twitter.com/'+tweet.screen_name+'" target="_blank">@'+tweet.screen_name+'</a>\
                   <span class="badge badge-success">'+tweet.retweet_count.toLocaleString()+' RTs</span>\
+                  <small class="pull-right muted">'+tweetDate.toLocaleString()+'</small>\
                 </h4>\
                 <p>'+htmlifyLinks(tweet.text)+'</p>\
               </div>\
@@ -140,14 +146,16 @@
             e.preventDefault();
             var searchForm = $(this);
             var searchTerm = searchForm.find('input[name="search-term"]').val();
-            socket.emit('filter', { query: searchTerm }, function() {
-              searchForm.fadeOut('fast', function() {
-                rtDiv.find('h2').html(searchTerm);
-                $('.masthead').fadeOut(function() {
-                  rtDiv.fadeIn();
+            if (searchTerm) {
+              socket.emit('filter', { query: searchTerm }, function() {
+                searchForm.fadeOut('fast', function() {
+                  rtDiv.find('h2').html(searchTerm);
+                  $('.masthead').fadeOut(function() {
+                    rtDiv.fadeIn();
+                  });
                 });
               });
-            });
+            }
             return false;
         });
       });

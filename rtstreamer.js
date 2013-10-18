@@ -29,8 +29,9 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
     });
 
     var retweets = db.collection('retweets'),
+        // @todo make this search case-insensitive?
         rtQuery  = {query: filterQuery};
-        rtFields = {screen_name: true, retweet_count: true, text: true, profile_image_url: true, tweet_id: true},
+        rtFields = {},
         rtOpts   = {limit: 10, sort: [["retweet_count", "desc"]]};
 
     var getTopTweets = function() {
