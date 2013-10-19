@@ -8,6 +8,8 @@ function RTStreamer() {
     return new RTStreamer();
   }
 
+  this.interval_id = null;
+
   events.EventEmitter.call(this);
 }
 util.inherits(RTStreamer, events.EventEmitter);
@@ -67,13 +69,25 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
           }
         })
         .on('error', function(e) {
-          self.emit('error', e);
+          self.emit('error', e).stopStream();
         });
 
-      // poll for new top 10 every 10 seconds...
-      setInterval(getTopTweets, pollInterval);
+      // poll for new tweets every 10 seconds...
+      self.interval_id = setInterval(getTopTweets, pollInterval);
     });
   });
+};
+
+RTStreamer.prototype.stopStream = function(callbackFn) {
+  var self = this;
+
+  if (self.interval_id) {
+    clearInterval(self.interval_id);
+  }
+
+  if (callbackFn && typeof callbackFn === "function") {
+    callbackFn();
+  }
 };
 
 module.exports = RTStreamer;

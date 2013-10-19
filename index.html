@@ -96,7 +96,9 @@
 
         var socket  = io.connect('http://localhost'),
             rtDiv   = $('#rt-container'),
-            theList = rtDiv.find('#rt-list');
+            theList = rtDiv.find('#rt-list'),
+            searchForm = $('#search-form'),
+            searchTerm = null;
 
         var formatTweet = function(tweet) {
           var tweetDate = new Date(tweet.created_at);
@@ -123,29 +125,58 @@
           return text.replace(exp,'<a href="$1" target="_blank">$1</a>');
         };
 
-        // @todo handle disconnects/reconnects (re-emit filter if necessary)
-        socket.on('data', function(tweets) {
-          // @todo only update the view if the data has actually changed
-          theList.fadeOut('fast', function() {
-            theList.html('');
-            if (tweets.length > 0) {
-                $.each(tweets, function(index, tweet) {
-                  tweet.rank = index+1;
-                  var newTweet = $('<div></div>');
-                  newTweet.html(formatTweet(tweet));
-                  theList.append(newTweet);
-                });
-            } else {
-              theList.html('No retweets found yet... please wait...');
-            }
-            theList.fadeIn();
+        // @todo give some visual indication to the client of connection status/events
+        socket
+          .on('connecting', function() {
+            console.log('Connecting to socket...');
+          })
+          .on('connect_failed', function() {
+            console.error('Connection to socket failed!');
+          })
+          .on('connect', function() {
+            console.log('Socket connected!');
+          })
+          .on('disconnect', function() {
+            console.warn('Socket disconnected!');
+          })
+          .on('reconnecting', function() {
+            console.warn('Reconnecting to socket...');
+          })
+          .on('reconnect_failed', function() {
+            console.error('Reconnection to socket failed!');
+          })
+          .on('reconnect', function() {
+            console.log('Reconnected to socket!');
+            // resend previous filter so we can start getting results again
+            socket.emit('filter', { query: searchTerm }, function() {});
+          })
+          .on('error', function(e) {
+            console.error(e);
+          })
+          .on('message', function(msg) {
+            console.log(msg);
+          })
+          .on('data', function(tweets) {
+            // @todo only update the view if the data has actually changed
+            theList.fadeOut('fast', function() {
+              theList.html('');
+              if (tweets.length > 0) {
+                  $.each(tweets, function(index, tweet) {
+                    tweet.rank = index+1;
+                    var newTweet = $('<div></div>');
+                    newTweet.html(formatTweet(tweet));
+                    theList.append(newTweet);
+                  });
+              } else {
+                theList.html('No retweets found yet... please wait...');
+              }
+              theList.fadeIn();
+            });
           });
-        });
 
-        $('#search-form').on('submit', function(e) {
+        searchForm.on('submit', function(e) {
             e.preventDefault();
-            var searchForm = $(this);
-            var searchTerm = searchForm.find('input[name="search-term"]').val();
+            searchTerm = searchForm.find('input[name="search-term"]').val();
             if (searchTerm) {
               socket.emit('filter', { query: searchTerm }, function() {
                 searchForm.fadeOut('fast', function() {

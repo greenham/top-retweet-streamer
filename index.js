@@ -21,21 +21,37 @@ function handler (req, res) {
   });
 }
 
+io.set('log level', 2);
+
 io.sockets.on('connection', function (socket) {
-  // @todo handle disconnects/reconnects
-  socket.on('filter', function (data, callbackFn) {
-    console.log('Received filter request from client: ' + data.query);
-    var streamer = new RTStreamer();
-    streamer
-      .on('data', function(tweets) {
-        socket.emit('data', tweets);
-      })
-      .on('error', function(err) {
-        socket.emit('error', err);
+  var streamer = new RTStreamer();
+
+  socket
+    .on('filter', function (data, callbackFn) {
+      console.log('Received filter request from client: ' + data.query);
+
+      streamer
+        .on('data', function(tweets) {
+          console.log('Sending '+tweets.length+' tweets to client...');
+          socket.emit('data', tweets);
+        })
+        .on('error', function(err) {
+          console.error('Streamer error: ' + err);
+          socket.emit('error', err).disconnect();
+        });
+
+      streamer.stream(data.query, 10000);
+
+      if (callbackFn && typeof callbackFn === "function") {
+        callbackFn();
+      }
+    })
+    .on('disconnect', function() {
+      console.log('Client disconnected... stopping stream...');
+      streamer.stopStream(function() {
+        console.log('Stream stopped.');
       });
-    streamer.stream(data.query, 10000);
-    callbackFn();
-  });
+    });
 });
 
 app.listen(3000);
