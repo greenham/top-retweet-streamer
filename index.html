@@ -156,8 +156,15 @@
           .on('message', function(msg) {
             console.log(msg);
           })
+          .on('nodata', function() {
+            theList.fadeOut('fast', function() {
+              theList.html('No retweets found yet... please wait...');
+              theList.fadeIn();
+            });
+          })
           .on('data', function(tweets) {
-            // @todo only update the view if the data has actually changed
+            // @todo only update the view if the data has actually changed?
+            // @todo store local array of tweet IDs + ranks and compare with new list?
             theList.fadeOut('fast', function() {
               theList.html('');
               if (tweets.length > 0) {
@@ -175,19 +182,19 @@
           });
 
         searchForm.on('submit', function(e) {
-            e.preventDefault();
-            searchTerm = searchForm.find('input[name="search-term"]').val();
-            if (searchTerm) {
-              socket.emit('filter', { query: searchTerm }, function() {
-                searchForm.fadeOut('fast', function() {
-                  rtDiv.find('h2').html(searchTerm);
-                  $('.masthead').fadeOut(function() {
-                    rtDiv.fadeIn();
-                  });
+          e.preventDefault();
+          searchTerm = searchForm.find('input[name="search-term"]').val();
+          if (searchTerm) {
+            socket.emit('filter', { query: searchTerm }, function() {
+              searchForm.fadeOut('fast', function() {
+                rtDiv.find('h2').html(searchTerm);
+                $('.masthead').fadeOut(function() {
+                  rtDiv.fadeIn();
                 });
               });
-            }
-            return false;
+            });
+          }
+          return false;
         });
       });
     </script>

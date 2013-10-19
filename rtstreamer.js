@@ -40,8 +40,10 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
       retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
         if ( ! err && result) {
           result.toArray(function(err, resultArr) {
-            if ( ! err && resultArr) {
+            if ( ! err && resultArr.length > 0) {
               self.emit('data', resultArr);
+            } else {
+              self.emit('nodata');
             }
           });
         }

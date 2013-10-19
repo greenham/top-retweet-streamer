@@ -35,6 +35,10 @@ io.sockets.on('connection', function (socket) {
           console.log('Sending '+tweets.length+' tweets to client...');
           socket.emit('data', tweets);
         })
+        .on('nodata', function() {
+          console.log('No retweets for \''+data.query+'\' found yet...');
+          socket.emit('nodata');
+        })
         .on('error', function(err) {
           console.error('Streamer error: ' + err);
           socket.emit('error', err).disconnect();
