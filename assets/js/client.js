@@ -6,27 +6,47 @@ $( document ).ready(function() {
       searchTerm = null;
 
   var formatTweet = function(tweet) {
-    var tweetDate = new Date(tweet.created_at);
-    return '<div class="media well" id="tweet-'+tweet.tweet_id+'">\
+    var profileUrl = 'https://twitter.com/'+tweet.screen_name,
+        tweetUrl   = 'https://twitter.com/'+tweet.screen_name+'/status/'+tweet.tweet_id;
+
+    return('\
+      <div class="media well" id="tweet-'+tweet.tweet_id+'">\
         <h3 class="pull-left">\
-          <a href="https://twitter.com/'+tweet.screen_name+'/status/'+tweet.tweet_id+'" target="_blank">#'+tweet.rank+'</a>\
+          <a href="'+tweetUrl+'" target="_blank">#'+tweet.rank+'</a>\
         </h3>\
-        <a class="pull-left" href="https://twitter.com/'+tweet.screen_name+'" target="_blank">\
-          <img class="media-object" alt="@'+tweet.screen_name+'" style="width: 48px; height: 48px;" src="'+tweet.profile_image_url+'">\
+        <a class="pull-left" href="'+profileUrl+'" target="_blank">\
+          <img class="media-object" alt="@'+tweet.screen_name+'" src="'+tweet.profile_image_url+'">\
         </a>\
         <div class="media-body">\
           <h4 class="media-heading">\
-            <a href="https://twitter.com/'+tweet.screen_name+'" target="_blank">@'+tweet.screen_name+'</a>\
+            <a href="'+profileUrl+'" target="_blank">@'+tweet.screen_name+'</a>\
             <span class="badge badge-success">'+tweet.retweet_count.toLocaleString()+' RTs</span>\
-            <small class="pull-right muted">'+tweetDate.toLocaleString()+'</small>\
+            <small class="pull-right muted" title="'+tweet.created_at+'">'+prettyDate(tweet.created_at)+'</small>\
           </h4>\
           <p>'+htmlifyLinks(tweet.text)+'</p>\
         </div>\
-      </div>';
+      </div>');
+  };
+
+  var prettyDate = function(time) {
+    var date     = new Date((time || "").replace(/-/g,"/").replace(/[TZ]/g," ")),
+        now      = new Date(),
+        diff     = ((now.getTime() - ((date.getTime()) - (0 * 60000))) / 1000),
+        day_diff = Math.floor(diff / 86400);
+
+    return day_diff <= 0 &&
+      (diff < 30 && "just now" ||
+      diff < 60 && "less than a minute ago" ||
+      diff < 120 && "a minute ago" ||
+      diff < 3600 && Math.floor( diff / 60 ) + " minutes ago" ||
+      diff < 7200 && "about an hour ago" ||
+      diff < 86400 && "about " + Math.floor( diff / 3600 ) + " hours ago") ||
+      day_diff == 1 && "yesterday" ||
+      day_diff + " days ago";
   };
 
   var htmlifyLinks = function(text) {
-    var exp = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+    var exp = /(\b(https?|ftp|file):\/\/[\-A-Z0-9+&@#\/%?=~_|!:,.;]*[\-A-Z0-9+&@#\/%=~_|])/ig;
     return text.replace(exp,'<a href="$1" target="_blank">$1</a>');
   };
 
