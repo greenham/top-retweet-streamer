@@ -45,7 +45,9 @@ io.sockets.on('connection', function (socket) {
           socket.disconnect();
         });
 
-      streamer.stream(data.query, 10000);
+      streamer.stream(data.query, 10000, function() {
+        console.log('Listening to stream for \''+data.query+'\'...');
+      });
 
       if (fn && typeof fn === "function") {
         fn();

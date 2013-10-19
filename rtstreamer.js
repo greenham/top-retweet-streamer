@@ -8,15 +8,20 @@ function RTStreamer() {
     return new RTStreamer();
   }
 
-  this.interval_id = null;
-  this.limit = 10;
-  this.streaming = false;
+  this.interval_id = false;
+  this.limit       = 10;
+  this.streaming   = false;
 
   events.EventEmitter.call(this);
 }
 util.inherits(RTStreamer, events.EventEmitter);
 
-RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
+/**
+ * Listens to stream of filtered twitter statuses, logs data to mongo collection, and emits top tweets.
+ * @param  {String} filterQuery  the search string to use
+ * @param  {Number} pollInterval how often (in ms) to emit new results
+ */
+RTStreamer.prototype.stream = function(filterQuery, pollInterval, fn) {
   var self = this;
 
   // connect to the DB
@@ -25,7 +30,7 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
       self.emit('error', err);
     }
 
-    // @todo move these keys to a settings file
+    // @note this is a developer account limited to a single connection
     var twit = new twitter({
       consumer_key: 'gUdGG5cbw2VYfKipEkFpQg',
       consumer_secret: 'fnKnMO7ddRUrUrCRGh0aeMR6vqtLuM4gqoOY63ApQ70',
@@ -33,12 +38,14 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
       access_token_secret: 'rBYSdSNlfXZz5X7vWCtqtJlO1iCREJ3PwDpCa1GYw'
     });
 
+    // set up the query for the top retweets
     var retweets = db.collection('retweets'),
         queryRegExp = new RegExp(filterQuery, 'i'),
         rtQuery  = {query: queryRegExp};
         rtFields = {},
         rtOpts   = {limit: self.limit, sort: [["retweet_count", "desc"]]};
 
+    // get the top tweets and emit data (or nodata) to listeners
     var getTopTweets = function() {
       retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
         if ( ! err && result) {
@@ -56,21 +63,23 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
     // emit the previous standings as the first packet if this filter has already been requested
     getTopTweets();
 
+    // listen to the stream and populate the mongo collection
     twit.stream('statuses/filter', {'track':filterQuery}, function(stream) {
       self.streaming = true;
       stream
         .on('data', function (tweet) {
+          // only consider a status if it's been retweeted
           if (tweet.retweeted_status && tweet.retweeted_status.retweet_count > 0) {
-            //console.dir(tweet);
             var newTweet = {
-              query: filterQuery,
-              tweet_id: tweet.retweeted_status.id_str,
-              screen_name: tweet.retweeted_status.user.screen_name,
+              query:             filterQuery,
+              tweet_id:          tweet.retweeted_status.id_str,
+              screen_name:       tweet.retweeted_status.user.screen_name,
               profile_image_url: tweet.retweeted_status.user.profile_image_url,
-              retweet_count: tweet.retweeted_status.retweet_count,
-              text: tweet.retweeted_status.text,
-              created_at: tweet.retweeted_status.created_at
+              retweet_count:     tweet.retweeted_status.retweet_count,
+              text:              tweet.retweeted_status.text,
+              created_at:        tweet.retweeted_status.created_at
             };
+            // create new tweet or update existing with new data
             retweets.update({tweet_id: tweet.retweeted_status.id_str}, newTweet, {upsert: true}, function(err, result) {});
           }
         })
@@ -79,12 +88,21 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
           self.stopStream();
         });
 
-      // poll for new tweets every 10 seconds...
+      // emit new list every once in a while
       self.interval_id = setInterval(getTopTweets, pollInterval);
     });
   });
+
+  if (fn && typeof fn === "function") {
+    fn();
+  }
 };
 
+/**
+ * Stops listening/logging of data.
+ * @param  {Function} fn callback function
+ * @return {void}
+ */
 RTStreamer.prototype.stopStream = function(fn) {
   if (this.interval_id) {
     clearInterval(this.interval_id);
@@ -97,6 +115,10 @@ RTStreamer.prototype.stopStream = function(fn) {
   }
 };
 
+/**
+ * Whether or not data is currently streaming
+ * @return {Boolean} [description]
+ */
 RTStreamer.prototype.isStreaming = function() {
   return this.streaming;
 };

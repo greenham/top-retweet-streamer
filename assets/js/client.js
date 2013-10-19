@@ -39,85 +39,41 @@ $( document ).ready(function() {
     .on('connect_failed', function() {
       console.error('Connection to socket failed!');
       searchForm.find('button').attr('disabled', 'disabled');
-      $.pnotify({
-        title: 'Error',
-        text: 'Could not connect to server!',
-        type: 'error',
-        history: false,
-        styling: 'bootstrap'
-      });
+      $.pnotify({title: 'Error', text: 'Could not connect to server!', type: 'error', history: false});
     })
     .on('connect', function() {
       console.log('Socket connected!');
     })
     .on('disconnect', function() {
       console.warn('Socket disconnected!');
-      $.pnotify({
-        title: 'Warning',
-        text: 'Lost connection to server! Please wait while we try to re-establish a connection...',
-        type: 'error',
-        history: false,
-        styling: 'bootstrap'
-      });
+      $.pnotify({title: 'Warning', text: 'Lost connection to server! Please wait while we try to re-establish a connection...', type: 'error', history: false});
     })
     .on('reconnecting', function() {
       console.warn('Reconnecting to socket...');
       if ( ! reconnectNotice) {
-        reconnectNotice = $.pnotify({
-          title: 'Status',
-          text: 'Attempting reconnection...',
-          nonblock: true,
-          hide: false,
-          closer: false,
-          sticker: false,
-          history: false,
-          styling: 'bootstrap'
-        });
+        reconnectNotice = $.pnotify({title: 'Status', text: 'Attempting reconnection...', nonblock: true, hide: false, closer: false, sticker: false, history: false});
       }
     })
     .on('reconnect_failed', function() {
       console.error('Reconnection to socket failed!');
       if (reconnectNotice.pnotify_remove) reconnectNotice.pnotify_remove();
-      $.pnotify({
-        title: 'Error',
-        text: 'Could not reconnect to server!',
-        type: 'error',
-        history: false,
-        styling: 'bootstrap'
-      });
+      $.pnotify({title: 'Error', text: 'Could not reconnect to server!', type: 'error', history: false});
     })
     .on('reconnect', function() {
       console.log('Reconnected to socket!');
       if (reconnectNotice.pnotify_remove) reconnectNotice.pnotify_remove();
       // resend previous filter so we can start getting results again
       socket.emit('filter', { query: searchTerm }, function() {
-        $.pnotify({
-          title: 'Status',
-          text: 'Reconnected to server! Updates will start again soon...',
-          type: 'success',
-          history: false,
-          styling: 'bootstrap'
-        });
+        $.pnotify({title: 'Status', text: 'Reconnected to server! Updates will start again soon...', type: 'success', history: false});
       });
     })
     .on('error', function(e) {
       console.error(e);
-      $.pnotify({
-        title: 'Error',
-        text: 'Something went wrong!',
-        type: 'error',
-        history: false,
-        styling: 'bootstrap'
-      });
+      $.pnotify({title: 'Error', text: 'Something went wrong!', type: 'error', history: false});
     })
     .on('message', function(msg) {
       console.log(msg);
-      $.pnotify({
-        title: 'Notification',
-        text: msg,
-        history: false,
-        styling: 'bootstrap'
-      });
+      $.pnotify({title: 'Notification', text: msg, history: false});
     })
     .on('nodata', function() {
       theList.fadeOut('fast', function() {
@@ -126,7 +82,7 @@ $( document ).ready(function() {
       });
     })
     .on('data', function(tweets) {
-      // @note There's probably a much more elegant experience to be achieved here
+      // @note There's probably a much more elegant UX to be achieved here
       // like storing a local array of tweet IDs and their ranks, and only updating
       // the view if something changes. Or maybe that can be done on the backend.
       theList.fadeOut('fast', function() {
