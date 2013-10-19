@@ -27,7 +27,7 @@ io.sockets.on('connection', function (socket) {
   var streamer = new RTStreamer();
 
   socket
-    .on('filter', function (data, callbackFn) {
+    .on('filter', function (data, fn) {
       console.log('Received search request from client: ' + data.query);
 
       streamer
@@ -41,20 +41,25 @@ io.sockets.on('connection', function (socket) {
         })
         .on('error', function(err) {
           console.error('Streamer error: ' + err);
-          socket.emit('error', err).disconnect();
+          socket.emit('error', err);
+          socket.disconnect();
         });
 
       streamer.stream(data.query, 10000);
 
-      if (callbackFn && typeof callbackFn === "function") {
-        callbackFn();
+      if (fn && typeof fn === "function") {
+        fn();
       }
     })
     .on('disconnect', function() {
-      console.log('Client disconnected... stopping stream...');
-      streamer.stopStream(function() {
-        console.log('Stream stopped.');
-      });
+      // only stop the stream if it's been started!
+      // client can disconnect without having active stream
+      if (true === streamer.isStreaming()) {
+        console.log('Client disconnected... Stopping stream...');
+        streamer.stopStream(function() {
+          console.log('Stream stopped.');
+        });
+      }
     });
 });
 

@@ -10,6 +10,7 @@ function RTStreamer() {
 
   this.interval_id = null;
   this.limit = 10;
+  this.streaming = false;
 
   events.EventEmitter.call(this);
 }
@@ -56,6 +57,7 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
     getTopTweets();
 
     twit.stream('statuses/filter', {'track':filterQuery}, function(stream) {
+      self.streaming = true;
       stream
         .on('data', function (tweet) {
           if (tweet.retweeted_status && tweet.retweeted_status.retweet_count > 0) {
@@ -73,7 +75,8 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
           }
         })
         .on('error', function(e) {
-          self.emit('error', e).stopStream();
+          self.emit('error', e);
+          self.stopStream();
         });
 
       // poll for new tweets every 10 seconds...
@@ -82,16 +85,20 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
   });
 };
 
-RTStreamer.prototype.stopStream = function(callbackFn) {
-  var self = this;
-
-  if (self.interval_id) {
-    clearInterval(self.interval_id);
+RTStreamer.prototype.stopStream = function(fn) {
+  if (this.interval_id) {
+    clearInterval(this.interval_id);
   }
 
-  if (callbackFn && typeof callbackFn === "function") {
-    callbackFn();
+  this.streaming = false;
+
+  if (fn && typeof fn === "function") {
+    fn();
   }
+};
+
+RTStreamer.prototype.isStreaming = function() {
+  return this.streaming;
 };
 
 module.exports = RTStreamer;
