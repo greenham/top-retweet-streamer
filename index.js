@@ -5,7 +5,7 @@ var fs = require('fs'),
     io = require('socket.io').listen(app),
     RTStreamer = require('./rtstreamer');
 
-function handler (req, res) {
+function handler(req, res) {
   var path = url.parse(req.url).path;
   if ( ! path || path == '/') {
     path = '/index.html';
@@ -28,11 +28,11 @@ io.sockets.on('connection', function (socket) {
 
   socket
     .on('filter', function (data, callbackFn) {
-      console.log('Received filter request from client: ' + data.query);
+      console.log('Received search request from client: ' + data.query);
 
       streamer
         .on('data', function(tweets) {
-          console.log('Sending '+tweets.length+' tweets to client...');
+          console.log('Received '+tweets.length+' tweets for \''+data.query+'\'. Sending to client...');
           socket.emit('data', tweets);
         })
         .on('nodata', function() {

@@ -1,7 +1,7 @@
-var twitter     = require('ntwitter'),
-    MongoClient = require('mongodb').MongoClient,
-    util        = require('util'),
-    events      = require('events');
+var util        = require('util'),
+    events      = require('events'),
+    twitter     = require('ntwitter'),
+    MongoClient = require('mongodb').MongoClient;
 
 function RTStreamer() {
   if (false === (this instanceof RTStreamer)) {
@@ -9,6 +9,7 @@ function RTStreamer() {
   }
 
   this.interval_id = null;
+  this.limit = 10;
 
   events.EventEmitter.call(this);
 }
@@ -23,6 +24,7 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
       self.emit('error', err);
     }
 
+    // @todo move these keys to a settings file
     var twit = new twitter({
       consumer_key: 'gUdGG5cbw2VYfKipEkFpQg',
       consumer_secret: 'fnKnMO7ddRUrUrCRGh0aeMR6vqtLuM4gqoOY63ApQ70',
@@ -31,10 +33,10 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
     });
 
     var retweets = db.collection('retweets'),
-        // @todo make this search case-insensitive?
-        rtQuery  = {query: filterQuery};
+        queryRegExp = new RegExp(filterQuery, 'i'),
+        rtQuery  = {query: queryRegExp};
         rtFields = {},
-        rtOpts   = {limit: 10, sort: [["retweet_count", "desc"]]};
+        rtOpts   = {limit: self.limit, sort: [["retweet_count", "desc"]]};
 
     var getTopTweets = function() {
       retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
@@ -50,7 +52,7 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval) {
       });
     };
 
-    // For a filter that has already has been requested before, return the previous top 10 standings as the first packet.
+    // emit the previous standings as the first packet if this filter has already been requested
     getTopTweets();
 
     twit.stream('statuses/filter', {'track':filterQuery}, function(stream) {
