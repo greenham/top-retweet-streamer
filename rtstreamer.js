@@ -133,6 +133,7 @@ RTStreamer.prototype.stream = function(filterQuery, callback) {
 
       // check for a new list to emit every once in awhile
       self.interval_id = setInterval(updateTopRetweets, self.config.poll_interval);
+      self.twitstream = stream;
 
       if (validCallback) {
         callback(null, self);
