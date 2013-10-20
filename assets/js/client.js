@@ -1,7 +1,7 @@
 $( document ).ready(function() {
-  var socket  = io.connect('http://localhost'),
-      rtDiv   = $('#rt-container'),
-      theList = rtDiv.find('#rt-list'),
+  var socket     = io.connect('http://localhost'),
+      rtDiv      = $('#rt-container'),
+      theList    = rtDiv.find('#rt-list'),
       searchForm = $('#search-form'),
       searchTerm = false;
 

@@ -5,11 +5,13 @@ var fs         = require('fs'),
     io         = require('socket.io').listen(app),
     RTStreamer = require('./rtstreamer');
 
+// the HTTP handler
 function handler(req, res) {
   var path = url.parse(req.url).path;
   if ( ! path || path == '/') {
     path = '/index.html';
   }
+
   fs.readFile(__dirname + path, function (err, data) {
     if (err) {
       res.writeHead(500, {'Content-Type': 'text/plain'});
@@ -21,45 +23,49 @@ function handler(req, res) {
   });
 }
 
-io.set('log level', 2);
+io.set('log level', 2); // 0 -> error, 1 -> warn, 2 -> info, 3 -> debug
 
 io.sockets.on('connection', function (socket) {
   var streamer = new RTStreamer();
 
   socket
-    .on('filter', function (data, fn) {
+    .on('filter', function (data, callback) {
       console.log('Received search request from client: ' + data.query);
 
-      streamer
-        .on('data', function(tweets) {
-          console.log('Received '+tweets.length+' tweets for \''+data.query+'\'. Sending to client...');
-          socket.emit('data', tweets);
-        })
-        .on('nodata', function() {
-          console.log('No retweets for \''+data.query+'\' found yet...');
-          socket.emit('nodata');
-        })
-        .on('error', function(err) {
-          console.error('Streamer error: ' + err);
-          if (fn && typeof fn === "function") {
-            fn(err);
-          }
-        });
+      var validCallback = (callback && typeof callback === "function");
 
-      streamer.stream(data.query, 10000, function(err) {
+      streamer.stream(data.query, 10000, function(err, stream) {
         if (err) {
-          console.error('Unable to listen to stream  for \''+data.query+'\': ' + err);
-          if (fn && typeof fn === "function") {
-            fn(err);
+          console.error('Unable to listen to stream for \''+data.query+'\': ' + err);
+          if (validCallback) {
+            callback(err);
           }
         } else {
           console.log('Listening to stream for \''+data.query+'\'...');
+
+          stream
+            .on('data', function(tweets) {
+              console.log('Received '+tweets.length+' tweets for \''+data.query+'\'. Sending to client...');
+              socket.emit('data', tweets);
+            })
+            .on('nodata', function() {
+              console.log('No retweets for \''+data.query+'\' found yet...');
+              socket.emit('nodata');
+            })
+            .on('nochange', function() {
+              console.log('No change in list for \''+data.query+'\'');
+            })
+            .on('error', function(err) {
+              console.error('Streamer error: ' + err);
+              socket.emit('error', err);
+              socket.disconnect();
+            });
+
+          if (validCallback) {
+            callback();
+          }
         }
       });
-
-      if (fn && typeof fn === "function") {
-        fn();
-      }
     })
     .on('disconnect', function() {
       // only stop the stream if it's been started!

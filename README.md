@@ -3,6 +3,11 @@ Top ReTweet Streamer
 
 A realtime top retweets streamer using node.js, mongodb, socket.io, and Twitter's Streaming API with support for searching.
 
+Requirements
+------------
+- node.js/npm
+- mongodb (running on port 27017)
+
 Installation
 ------------
 

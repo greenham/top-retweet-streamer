@@ -10,7 +10,14 @@ function RTStreamer() {
 
   this.interval_id = false;
   this.limit       = 10;
-  this.streaming   = false;
+  this.twitstream  = false;
+
+  this.twit        = new twitter({
+    consumer_key: 'gUdGG5cbw2VYfKipEkFpQg',
+    consumer_secret: 'fnKnMO7ddRUrUrCRGh0aeMR6vqtLuM4gqoOY63ApQ70',
+    access_token_key: '1963789585-njzp3nBKbD75doKnBlEv3F1sfAfTylI8VAVOjG6',
+    access_token_secret: 'rBYSdSNlfXZz5X7vWCtqtJlO1iCREJ3PwDpCa1GYw'
+  });
 
   events.EventEmitter.call(this);
 }
@@ -21,23 +28,17 @@ util.inherits(RTStreamer, events.EventEmitter);
  * @param  {String} filterQuery  the search string to use
  * @param  {Number} pollInterval how often (in ms) to emit new results
  */
-RTStreamer.prototype.stream = function(filterQuery, pollInterval, fn) {
+RTStreamer.prototype.stream = function(filterQuery, pollInterval, callback) {
   var self          = this,
-      validCallback = (fn && typeof fn === "function"),
-      twit          = new twitter({
-                        consumer_key: 'gUdGG5cbw2VYfKipEkFpQg',
-                        consumer_secret: 'fnKnMO7ddRUrUrCRGh0aeMR6vqtLuM4gqoOY63ApQ70',
-                        access_token_key: '1963789585-njzp3nBKbD75doKnBlEv3F1sfAfTylI8VAVOjG6',
-                        access_token_secret: 'rBYSdSNlfXZz5X7vWCtqtJlO1iCREJ3PwDpCa1GYw'
-                      });
+      validCallback = (callback && typeof callback === "function");
 
   // connect to the DB
   MongoClient.connect("mongodb://localhost:27017/retweets", function(err, db) {
     if (err) {
       if (validCallback) {
-        fn(err);
+        callback(err);
       }
-      return false;
+      return self;
     }
 
     // set up the query for the top retweets
@@ -48,44 +49,60 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval, fn) {
         rtOpts      = {limit: self.limit, sort: [["retweet_count", "desc"]]},
         lastResult  = false;
 
-    // get the top tweets and emit data (or nodata) to listeners
-    var getTopTweets = function() {
+    // gets the top tweets and emits results to listeners
+    var updateTopRetweets = function() {
       retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
-        if ( ! err && result) {
-          result.toArray(function(err, resultArr) {
-            if ( ! err && resultArr.length > 0) {
-              // only emit data if it has changed
-              var changed = false;
-
-              if (lastResult && lastResult.length === resultArr.length) {
-                for (var i = 0; i < resultArr.length; i++) {
-                  if (resultArr[i].tweet_id !== lastResult[i].tweet_id || resultArr[i].retweet_count !== lastResult[i].retweet_count) {
-                    changed = true;
-                    break;
+        if (!err) {
+          if (result) {
+            result.toArray(function(err, resultArr) {
+              if (!err) {
+                if (resultArr.length > 0) {
+                  // only emit data if it has changed
+                  if (true === topListHasChanged(lastResult, resultArr)) {
+                    lastResult = resultArr;
+                    self.emit('data', resultArr);
+                  } else {
+                    self.emit('nochange');
                   }
+                } else {
+                  self.emit('nodata');
                 }
               } else {
-                changed = true;
+                self.emit('error', err);
               }
-
-              if (changed) {
-                lastResult = resultArr;
-                self.emit('data', resultArr);
-              }
-            } else {
-              self.emit('nodata');
-            }
-          });
+            });
+          } else {
+            self.emit('nodata');
+          }
+        } else {
+          self.emit('error', err);
         }
       });
     };
 
-    // emit the previous standings as the first packet if this filter has already been requested
-    getTopTweets();
+    // sees if there's any difference between the last set of results and this one
+    var topListHasChanged = function(lastResult, resultArr) {
+      var changed = false;
 
-    // listen to the stream and populate the mongo collection
-    twit.stream('statuses/filter', {'track':filterQuery}, function(stream) {
-      self.streaming = true;
+      if (lastResult !== false && lastResult.length === resultArr.length) {
+        for (var i = 0; i < resultArr.length; i++) {
+          if (resultArr[i].tweet_id !== lastResult[i].tweet_id || resultArr[i].retweet_count !== lastResult[i].retweet_count) {
+            changed = true;
+            break;
+          }
+        }
+      } else {
+        changed = true;
+      }
+
+      return changed;
+    };
+
+    // emit the previous standings as the first packet if this query has already been requested
+    updateTopRetweets();
+
+    // listen to the stream and populate the DB
+    self.twit.stream('statuses/filter', {'track':filterQuery}, function(stream) {
       stream
         .on('data', function (tweet) {
           // only consider a status if it's been retweeted
@@ -100,47 +117,60 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval, fn) {
               created_at:        tweet.retweeted_status.created_at
             };
             // create new tweet or update existing with new data
-            retweets.update({tweet_id: tweet.retweeted_status.id_str}, newTweet, {upsert: true}, function(err, result) {});
+            retweets.update({tweet_id: tweet.retweeted_status.id_str}, newTweet, {upsert: true}, function(err, result) {
+              if (err) {
+                self.emit('error', err);
+              }
+            });
           }
         })
         .on('error', function(e) {
           self.emit('error', e);
           self.stopStream();
+        })
+        .on('end', function (response) {
+          self.stopStream();
+        })
+        .on('destroy', function (response) {
+          // a 'silent' disconnection from Twitter, no end/error event fired
         });
 
       // check for a new list to emit every once in awhile
-      self.interval_id = setInterval(getTopTweets, pollInterval);
+      self.interval_id = setInterval(updateTopRetweets, pollInterval);
+
+      if (validCallback) {
+        callback(null, self);
+      }
     });
   });
 
-  if (fn && typeof fn === "function") {
-    fn();
-  }
+  return self;
 };
 
-/**
- * Stops listening/logging of data.
- * @param  {Function} fn callback function
- * @return {void}
- */
-RTStreamer.prototype.stopStream = function(fn) {
-  if (this.streaming && this.interval_id) {
+
+// stops listening/logging/emitting of data.
+RTStreamer.prototype.stopStream = function(callback) {
+  // stop listening/logging
+  if (this.twitstream !== false) {
+    this.twitstream.destroy();
+  }
+
+  // stop emitting
+  if (this.interval_id !== false) {
     clearInterval(this.interval_id);
   }
 
-  this.streaming = false;
-
-  if (fn && typeof fn === "function") {
-    fn();
+  if (callback && typeof callback === "function") {
+    callback();
   }
+
+  return this;
 };
 
-/**
- * Whether or not data is currently streaming
- * @return {Boolean} [description]
- */
+
+// returns whether or not data is currently streaming
 RTStreamer.prototype.isStreaming = function() {
-  return this.streaming;
+  return (this.twitstream !== false);
 };
 
 module.exports = RTStreamer;
