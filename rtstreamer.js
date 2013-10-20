@@ -39,11 +39,12 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval, fn) {
     });
 
     // set up the query for the top retweets
-    var retweets = db.collection('retweets'),
+    var retweets    = db.collection('retweets'),
         queryRegExp = new RegExp(filterQuery, 'i'),
-        rtQuery  = {query: queryRegExp};
-        rtFields = {},
-        rtOpts   = {limit: self.limit, sort: [["retweet_count", "desc"]]};
+        rtQuery     = {query: queryRegExp};
+        rtFields    = {},
+        rtOpts      = {limit: self.limit, sort: [["retweet_count", "desc"]]},
+        lastResult  = false;
 
     // get the top tweets and emit data (or nodata) to listeners
     var getTopTweets = function() {
@@ -51,7 +52,24 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval, fn) {
         if ( ! err && result) {
           result.toArray(function(err, resultArr) {
             if ( ! err && resultArr.length > 0) {
-              self.emit('data', resultArr);
+              // only emit data if it has changed
+              var changed = false;
+
+              if (lastResult && lastResult.length === resultArr.length) {
+                for (var i = 0; i < resultArr.length; i++) {
+                  if (resultArr[i].tweet_id !== lastResult[i].tweet_id || resultArr[i].retweet_count !== lastResult[i].retweet_count) {
+                    changed = true;
+                    break;
+                  }
+                }
+              } else {
+                changed = true;
+              }
+
+              if (changed) {
+                lastResult = resultArr;
+                self.emit('data', resultArr);
+              }
             } else {
               self.emit('nodata');
             }

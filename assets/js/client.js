@@ -3,7 +3,7 @@ $( document ).ready(function() {
       rtDiv   = $('#rt-container'),
       theList = rtDiv.find('#rt-list'),
       searchForm = $('#search-form'),
-      searchTerm = null;
+      searchTerm = false;
 
   var formatTweet = function(tweet) {
     var profileUrl = 'https://twitter.com/'+tweet.screen_name,
@@ -55,10 +55,11 @@ $( document ).ready(function() {
   socket
     .on('connecting', function() {
       console.log('Connecting to socket...');
+      searchForm.find('button').addClass('btn-success').removeAttr('disabled');
     })
     .on('connect_failed', function() {
       console.error('Connection to socket failed!');
-      searchForm.find('button').attr('disabled', 'disabled');
+      searchForm.find('button').removeClass('btn-success').attr('disabled', true);
       $.pnotify({title: 'Error', text: 'Could not connect to server!', type: 'error', history: false});
     })
     .on('connect', function() {
@@ -66,6 +67,7 @@ $( document ).ready(function() {
     })
     .on('disconnect', function() {
       console.warn('Socket disconnected!');
+      searchForm.find('button').removeClass('btn-success').attr('disabled', true);
       $.pnotify({title: 'Warning', text: 'Lost connection to server! Please wait while we try to re-establish a connection...', type: 'error', history: false});
     })
     .on('reconnecting', function() {
@@ -76,16 +78,27 @@ $( document ).ready(function() {
     })
     .on('reconnect_failed', function() {
       console.error('Reconnection to socket failed!');
-      if (reconnectNotice.pnotify_remove) reconnectNotice.pnotify_remove();
+      if (reconnectNotice.pnotify_remove) {
+        reconnectNotice = false;
+        reconnectNotice.pnotify_remove();
+      }
       $.pnotify({title: 'Error', text: 'Could not reconnect to server!', type: 'error', history: false});
     })
     .on('reconnect', function() {
       console.log('Reconnected to socket!');
-      if (reconnectNotice.pnotify_remove) reconnectNotice.pnotify_remove();
+      if (reconnectNotice.pnotify_remove) {
+        reconnectNotice = false;
+        reconnectNotice.pnotify_remove();
+      }
       // resend previous filter so we can start getting results again
-      socket.emit('filter', { query: searchTerm }, function() {
-        $.pnotify({title: 'Status', text: 'Reconnected to server! Updates will start again soon...', type: 'success', history: false});
-      });
+      if (searchTerm) {
+        socket.emit('filter', { query: searchTerm }, function() {
+          $.pnotify({title: 'Status', text: 'Reconnected to server! Updates will start again soon...', type: 'success', history: false});
+        });
+      } else {
+        searchForm.find('button').addClass('btn-success').removeAttr('disabled');
+        $.pnotify({title: 'Status', text: 'Reconnected to server!', type: 'success', history: false});
+      }
     })
     .on('error', function(e) {
       console.error(e);
@@ -102,9 +115,6 @@ $( document ).ready(function() {
       });
     })
     .on('data', function(tweets) {
-      // @note There's probably a much more elegant UX to be achieved here
-      // like storing a local array of tweet IDs and their ranks, and only updating
-      // the view if something changes. Or maybe that can be done on the backend.
       theList.fadeOut('fast', function() {
         theList.html('');
         if (tweets.length > 0) {
