@@ -3,21 +3,15 @@ var util        = require('util'),
     twitter     = require('ntwitter'),
     MongoClient = require('mongodb').MongoClient;
 
-function RTStreamer() {
+function RTStreamer(config) {
   if (false === (this instanceof RTStreamer)) {
-    return new RTStreamer();
+    return new RTStreamer(config);
   }
 
+  this.config      = config;
   this.interval_id = false;
-  this.limit       = 10;
   this.twitstream  = false;
-
-  this.twit        = new twitter({
-    consumer_key: 'gUdGG5cbw2VYfKipEkFpQg',
-    consumer_secret: 'fnKnMO7ddRUrUrCRGh0aeMR6vqtLuM4gqoOY63ApQ70',
-    access_token_key: '1963789585-njzp3nBKbD75doKnBlEv3F1sfAfTylI8VAVOjG6',
-    access_token_secret: 'rBYSdSNlfXZz5X7vWCtqtJlO1iCREJ3PwDpCa1GYw'
-  });
+  this.twit        = new twitter(this.config.twitter);
 
   events.EventEmitter.call(this);
 }
@@ -25,15 +19,17 @@ util.inherits(RTStreamer, events.EventEmitter);
 
 /**
  * Listens to stream of filtered twitter statuses, logs data to mongo collection, and emits top tweets.
- * @param  {String} filterQuery  the search string to use
- * @param  {Number} pollInterval how often (in ms) to emit new results
+ * @param  {String}   filterQuery  the search string to use
+ * @param  {Number}   pollInterval how often (in ms) to emit new results
+ * @param  {Number}   limit        max number of top retweets to emit
+ * @param  {Function} callback     callback function
  */
-RTStreamer.prototype.stream = function(filterQuery, pollInterval, callback) {
+RTStreamer.prototype.stream = function(filterQuery, callback) {
   var self          = this,
       validCallback = (callback && typeof callback === "function");
 
   // connect to the DB
-  MongoClient.connect("mongodb://localhost:27017/retweets", function(err, db) {
+  MongoClient.connect(self.config.mongodb.host, function(err, db) {
     if (err) {
       if (validCallback) {
         callback(err);
@@ -46,7 +42,7 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval, callback) {
         queryRegExp = new RegExp(filterQuery, 'i'),
         rtQuery     = {query: queryRegExp};
         rtFields    = {},
-        rtOpts      = {limit: self.limit, sort: [["retweet_count", "desc"]]},
+        rtOpts      = {limit: self.config.top_retweets_limit, sort: [["retweet_count", "desc"]]},
         lastResult  = false;
 
     // gets the top tweets and emits results to listeners
@@ -136,7 +132,7 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval, callback) {
         });
 
       // check for a new list to emit every once in awhile
-      self.interval_id = setInterval(updateTopRetweets, pollInterval);
+      self.interval_id = setInterval(updateTopRetweets, self.config.poll_interval);
 
       if (validCallback) {
         callback(null, self);

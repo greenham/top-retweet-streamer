@@ -3,7 +3,8 @@ var fs         = require('fs'),
     url        = require('url'),
     app        = require('http').createServer(handler),
     io         = require('socket.io').listen(app),
-    RTStreamer = require('./rtstreamer');
+    RTStreamer = require('./rtstreamer'),
+    config     = require('./config');
 
 // the HTTP handler
 function handler(req, res) {
@@ -26,7 +27,7 @@ function handler(req, res) {
 io.set('log level', 2); // 0 -> error, 1 -> warn, 2 -> info, 3 -> debug
 
 io.sockets.on('connection', function (socket) {
-  var streamer = new RTStreamer();
+  var streamer = new RTStreamer(config);
 
   socket
     .on('filter', function (data, callback) {
@@ -34,7 +35,7 @@ io.sockets.on('connection', function (socket) {
 
       var validCallback = (callback && typeof callback === "function");
 
-      streamer.stream(data.query, 10000, function(err, stream) {
+      streamer.stream(data.query, function(err, stream) {
         if (err) {
           console.error('Unable to listen to stream for \''+data.query+'\': ' + err);
           if (validCallback) {
