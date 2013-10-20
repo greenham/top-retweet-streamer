@@ -41,12 +41,20 @@ io.sockets.on('connection', function (socket) {
         })
         .on('error', function(err) {
           console.error('Streamer error: ' + err);
-          socket.emit('error', err);
-          socket.disconnect();
+          if (fn && typeof fn === "function") {
+            fn(err);
+          }
         });
 
-      streamer.stream(data.query, 5000, function() {
-        console.log('Listening to stream for \''+data.query+'\'...');
+      streamer.stream(data.query, 10000, function(err) {
+        if (err) {
+          console.error('Unable to listen to stream  for \''+data.query+'\': ' + err);
+          if (fn && typeof fn === "function") {
+            fn(err);
+          }
+        } else {
+          console.log('Listening to stream for \''+data.query+'\'...');
+        }
       });
 
       if (fn && typeof fn === "function") {

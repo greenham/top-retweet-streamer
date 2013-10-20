@@ -50,7 +50,34 @@ $( document ).ready(function() {
     return text.replace(exp,'<a href="$1" target="_blank">$1</a>');
   };
 
-  var reconnectNotice = false;
+  var handleSearch = function(e) {
+    e.preventDefault();
+    searchTerm = searchForm.find('input[name="search-term"]').val();
+    if (searchTerm) {
+      socket.emit('filter', {query: searchTerm}, function(err) {
+        if (!err) {
+          searchForm.fadeOut('fast', function() {
+            rtDiv.find('h2').html(searchTerm);
+            $('.masthead').fadeOut(function() {
+              rtDiv.fadeIn();
+            });
+          });
+        } else {
+          console.error(err);
+          $.pnotify({title: 'Error', text: 'Something went wrong!', type: 'error'});
+        }
+      });
+    } else {
+      $.pnotify({title: 'Error', text: 'Please enter a search term!', type: 'error'});
+    }
+    return false;
+  };
+
+  searchForm.on('submit', handleSearch);
+
+  var reconnectNotice         = false;
+  $.pnotify.defaults.history  = false;
+  $.pnotify.defaults.nonblock = true;
 
   socket
     .on('connecting', function() {
@@ -60,7 +87,7 @@ $( document ).ready(function() {
     .on('connect_failed', function() {
       console.error('Connection to socket failed!');
       searchForm.find('button').removeClass('btn-success').attr('disabled', true);
-      $.pnotify({title: 'Error', text: 'Could not connect to server!', type: 'error', history: false});
+      $.pnotify({title: 'Error', text: 'Could not connect to server!', type: 'error'});
     })
     .on('connect', function() {
       console.log('Socket connected!');
@@ -68,45 +95,50 @@ $( document ).ready(function() {
     .on('disconnect', function() {
       console.warn('Socket disconnected!');
       searchForm.find('button').removeClass('btn-success').attr('disabled', true);
-      $.pnotify({title: 'Warning', text: 'Lost connection to server! Please wait while we try to re-establish a connection...', type: 'error', history: false});
+      $.pnotify({title: 'Warning', text: 'Lost connection to server! Please wait while we try to re-establish a connection...', type: 'error'});
     })
     .on('reconnecting', function() {
       console.warn('Reconnecting to socket...');
-      if ( ! reconnectNotice) {
-        reconnectNotice = $.pnotify({title: 'Status', text: 'Attempting reconnection...', nonblock: true, hide: false, closer: false, sticker: false, history: false});
+      if (!reconnectNotice) {
+        reconnectNotice = $.pnotify({title: 'Status', text: 'Attempting reconnection... please wait...', hide: false, closer: false, sticker: false});
       }
     })
     .on('reconnect_failed', function() {
       console.error('Reconnection to socket failed!');
-      if (reconnectNotice.pnotify_remove) {
+      if (reconnectNotice) {
+        reconnectNotice.remove();
         reconnectNotice = false;
-        reconnectNotice.pnotify_remove();
       }
-      $.pnotify({title: 'Error', text: 'Could not reconnect to server!', type: 'error', history: false});
+      $.pnotify({title: 'Error', text: 'Could not reconnect to server!', type: 'error'});
     })
     .on('reconnect', function() {
       console.log('Reconnected to socket!');
-      if (reconnectNotice.pnotify_remove) {
+      if (reconnectNotice) {
+        reconnectNotice.remove();
         reconnectNotice = false;
-        reconnectNotice.pnotify_remove();
       }
       // resend previous filter so we can start getting results again
       if (searchTerm) {
-        socket.emit('filter', { query: searchTerm }, function() {
-          $.pnotify({title: 'Status', text: 'Reconnected to server! Updates will start again soon...', type: 'success', history: false});
+        socket.emit('filter', {query: searchTerm}, function(err) {
+          if (!err) {
+            $.pnotify({title: 'Status', text: 'Reconnected to server! Updates will start again soon...', type: 'success'});
+          } else {
+            console.error(err);
+            $.pnotify({title: 'Error', text: 'Reconnected to server, but unable to receive updates!', type: 'error'});
+          }
         });
       } else {
         searchForm.find('button').addClass('btn-success').removeAttr('disabled');
-        $.pnotify({title: 'Status', text: 'Reconnected to server!', type: 'success', history: false});
+        $.pnotify({title: 'Status', text: 'Reconnected to server!', type: 'success'});
       }
     })
     .on('error', function(e) {
       console.error(e);
-      $.pnotify({title: 'Error', text: 'Something went wrong!', type: 'error', history: false});
+      $.pnotify({title: 'Error', text: 'Something went wrong!', type: 'error'});
     })
     .on('message', function(msg) {
       console.log(msg);
-      $.pnotify({title: 'Notification', text: msg, history: false});
+      $.pnotify({title: 'Notification', text: msg});
     })
     .on('nodata', function() {
       theList.fadeOut('fast', function() {
@@ -131,20 +163,4 @@ $( document ).ready(function() {
         theList.fadeIn();
       });
     });
-
-  searchForm.on('submit', function(e) {
-    e.preventDefault();
-    searchTerm = searchForm.find('input[name="search-term"]').val();
-    if (searchTerm) {
-      socket.emit('filter', { query: searchTerm }, function() {
-        searchForm.fadeOut('fast', function() {
-          rtDiv.find('h2').html(searchTerm);
-          $('.masthead').fadeOut(function() {
-            rtDiv.fadeIn();
-          });
-        });
-      });
-    }
-    return false;
-  });
 });

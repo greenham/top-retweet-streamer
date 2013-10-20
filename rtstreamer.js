@@ -22,21 +22,23 @@ util.inherits(RTStreamer, events.EventEmitter);
  * @param  {Number} pollInterval how often (in ms) to emit new results
  */
 RTStreamer.prototype.stream = function(filterQuery, pollInterval, fn) {
-  var self = this;
+  var self          = this,
+      validCallback = (fn && typeof fn === "function"),
+      twit          = new twitter({
+                        consumer_key: 'gUdGG5cbw2VYfKipEkFpQg',
+                        consumer_secret: 'fnKnMO7ddRUrUrCRGh0aeMR6vqtLuM4gqoOY63ApQ70',
+                        access_token_key: '1963789585-njzp3nBKbD75doKnBlEv3F1sfAfTylI8VAVOjG6',
+                        access_token_secret: 'rBYSdSNlfXZz5X7vWCtqtJlO1iCREJ3PwDpCa1GYw'
+                      });
 
   // connect to the DB
   MongoClient.connect("mongodb://localhost:27017/retweets", function(err, db) {
     if (err) {
-      self.emit('error', err);
+      if (validCallback) {
+        fn(err);
+      }
+      return false;
     }
-
-    // @note this is a developer account limited to a single connection
-    var twit = new twitter({
-      consumer_key: 'gUdGG5cbw2VYfKipEkFpQg',
-      consumer_secret: 'fnKnMO7ddRUrUrCRGh0aeMR6vqtLuM4gqoOY63ApQ70',
-      access_token_key: '1963789585-njzp3nBKbD75doKnBlEv3F1sfAfTylI8VAVOjG6',
-      access_token_secret: 'rBYSdSNlfXZz5X7vWCtqtJlO1iCREJ3PwDpCa1GYw'
-    });
 
     // set up the query for the top retweets
     var retweets    = db.collection('retweets'),
@@ -106,7 +108,7 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval, fn) {
           self.stopStream();
         });
 
-      // emit new list every once in a while
+      // check for a new list to emit every once in awhile
       self.interval_id = setInterval(getTopTweets, pollInterval);
     });
   });
@@ -122,7 +124,7 @@ RTStreamer.prototype.stream = function(filterQuery, pollInterval, fn) {
  * @return {void}
  */
 RTStreamer.prototype.stopStream = function(fn) {
-  if (this.interval_id) {
+  if (this.streaming && this.interval_id) {
     clearInterval(this.interval_id);
   }
 
