@@ -56,10 +56,12 @@ $( document ).ready(function() {
     if (searchTerm) {
       socket.emit('filter', {query: searchTerm}, function(err) {
         if (!err) {
-          searchForm.fadeOut('fast', function() {
+          searchForm.fadeOut('fast', function () {
             rtDiv.find('h2').html(searchTerm);
-            $('.masthead').fadeOut(function() {
-              rtDiv.fadeIn();
+            $('.masthead').fadeOut(function () {
+              rtDiv.fadeIn(function () {
+                $('.footer').html($('.masthead').html());
+              });
             });
           });
         } else {

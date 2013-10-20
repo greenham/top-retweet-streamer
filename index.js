@@ -1,8 +1,8 @@
-var fs = require('fs'),
-    mime = require('mime'),
-    url = require('url'),
-    app = require('http').createServer(handler),
-    io = require('socket.io').listen(app),
+var fs         = require('fs'),
+    mime       = require('mime'),
+    url        = require('url'),
+    app        = require('http').createServer(handler),
+    io         = require('socket.io').listen(app),
     RTStreamer = require('./rtstreamer');
 
 function handler(req, res) {
