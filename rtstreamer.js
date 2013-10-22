@@ -110,7 +110,7 @@ RTStreamer.prototype.stream = function(filterQuery, callback) {
               profile_image_url: tweet.retweeted_status.user.profile_image_url,
               retweet_count:     tweet.retweeted_status.retweet_count,
               text:              tweet.retweeted_status.text,
-              created_at:        tweet.retweeted_status.created_at
+              created_at:        new Date(tweet.retweeted_status.created_at)
             };
             // create new tweet or update existing with new data
             retweets.update({tweet_id: tweet.retweeted_status.id_str}, newTweet, {upsert: true}, function(err, result) {
