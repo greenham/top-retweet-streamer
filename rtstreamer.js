@@ -20,8 +20,6 @@ util.inherits(RTStreamer, events.EventEmitter);
 /**
  * Listens to stream of filtered twitter statuses, logs data to mongo collection, and emits top tweets.
  * @param  {String}   filterQuery  the search string to use
- * @param  {Number}   pollInterval how often (in ms) to emit new results
- * @param  {Number}   limit        max number of top retweets to emit
  * @param  {Function} callback     callback function
  */
 RTStreamer.prototype.stream = function(filterQuery, callback) {
@@ -46,6 +44,7 @@ RTStreamer.prototype.stream = function(filterQuery, callback) {
         lastResult  = false;
 
     // gets the top tweets and emits results to listeners
+    // @todo use a tailable cursor instead (look into capped collections)
     var updateTopRetweets = function() {
       retweets.find(rtQuery, rtFields, rtOpts, function(err, result) {
         if (!err) {
