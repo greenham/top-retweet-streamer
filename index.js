@@ -69,14 +69,20 @@ function startIOServer(collection) {
 }
 
 function feedClient(socket, collection) {
+  var rtstream = false;
   socket
     .on('filter', function (data, callback) {
-      handleFilter(socket, collection, data, function(err) {
+      handleFilter(socket, collection, data, function(err, stream) {
+        rtstream = stream;
         callback(err);
       });
     })
     .on('disconnect', function () {
       // @todo stop the stream for this client if necessary
+      if (rtstream !== false) {
+        console.log('Client disconnected. Stopping stream...');
+        rtstream.destroy();
+      }
     });
 }
 
@@ -103,8 +109,8 @@ function handleFilter(socket, collection, data, callback) {
     if (!err) {
       tweets.intervalEach(300, function (err, tweet) {
         if (tweet !== null) {
-          //console.dir(tweet);
-          //console.log('Received tweet for \''+filterQuery+'\'. Sending to client...');
+          console.dir(tweet);
+          console.log('Received tweet for \''+filterQuery+'\'. Sending to client...');
           socket.emit('data', tweet);
         }
       });
@@ -146,9 +152,9 @@ function handleFilter(socket, collection, data, callback) {
       .on('destroy', function (response) {
         // a 'silent' disconnection from Twitter, no end/error event fired
       });
-  });
 
-  callback();
+    callback(null, stream);
+  });
 }
 
 app.listen(3000);
