@@ -16,7 +16,11 @@ git clone git@github.com:greenham/top-retweet-streamer.git
 cd top-retweet-streamer
 npm install
 node index.js
+mongo localhost
+> db.createCollection("rtscapped", {capped: true, max: 10, size: 5000});
 ```
+
+
 
 Access via web browser: [http://localhost:3000](http://localhost:3000)
 

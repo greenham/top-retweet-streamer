@@ -91,6 +91,14 @@ $( document ).ready(function() {
       searchForm.find('button').removeClass('btn-success').attr('disabled', true);
       $.pnotify({title: 'Error', text: 'Could not connect to server!', type: 'error'});
     })
+    .on('data', function(tweet) {
+      console.log(tweet);
+      $('#waiting-msg').hide('fast');
+      tweet.rank = 0;
+      var newTweet = $('<div></div>');
+      newTweet.html(formatTweet(tweet));
+      theList.prepend(newTweet);
+    })
     .on('connect', function() {
       console.log('Socket connected!');
     })
@@ -141,28 +149,5 @@ $( document ).ready(function() {
     .on('message', function(msg) {
       console.log(msg);
       $.pnotify({title: 'Notification', text: msg});
-    })
-    .on('nodata', function() {
-      theList.fadeOut('fast', function() {
-        theList.html('No retweets found yet... please wait... <img src="/assets/img/ajax-loader.gif">');
-        theList.fadeIn();
-      });
-    })
-    .on('data', function(tweets) {
-      theList.fadeOut('fast', function() {
-        theList.html('');
-        if (tweets.length > 0) {
-            $.each(tweets, function(index, tweet) {
-              tweet.rank = index+1;
-              var newTweet = $('<div></div>');
-              newTweet.html(formatTweet(tweet));
-              theList.append(newTweet);
-            });
-        } else {
-          // @note this shouldn't happen on this event (see 'nodata'), but... just in case
-          theList.html('No retweets found yet... please wait... <img src="/assets/img/ajax-loader.gif">');
-        }
-        theList.fadeIn();
-      });
     });
 });
