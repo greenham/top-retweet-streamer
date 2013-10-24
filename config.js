@@ -1,8 +1,5 @@
 var config = {};
 
-config.top_retweets_limit = 10;
-config.poll_interval      = 10000;
-
 config.db = {
   host:       'mongodb://localhost:27017/retweets',
   collection: 'rtscapped'

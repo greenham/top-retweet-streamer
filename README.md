@@ -17,7 +17,7 @@ cd top-retweet-streamer
 npm install
 node index.js
 mongo localhost
-> db.createCollection("rtscapped", {capped: true, max: 10, size: 5000});
+> db.createCollection("rtscapped", {capped: true, size: 100000});
 ```
 
 

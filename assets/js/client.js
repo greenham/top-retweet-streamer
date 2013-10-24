@@ -1,9 +1,12 @@
 $( document ).ready(function() {
-  var socket     = io.connect('http://localhost'),
+  var socket = io.connect('http://localhost'),
       rtDiv      = $('#rt-container'),
       theList    = rtDiv.find('#rt-list'),
       searchForm = $('#search-form'),
-      searchTerm = false;
+      searchTerm = false,
+      topTweets  = [],
+      retweetThreshold = 0,
+      topRetweetLimit = 10;
 
   var formatTweet = function(tweet) {
     var profileUrl = 'https://twitter.com/'+tweet.screen_name,
@@ -20,7 +23,7 @@ $( document ).ready(function() {
         <div class="media-body">\
           <h4 class="media-heading">\
             <a href="'+profileUrl+'" target="_blank">@'+tweet.screen_name+'</a>\
-            <span class="badge badge-success">'+tweet.retweet_count.toLocaleString()+' RTs</span>\
+            <span class="badge badge-success rtcount">'+tweet.retweet_count.toLocaleString()+' RTs</span>\
             <small class="pull-right muted" title="'+tweet.created_at+'">'+prettyDate(tweet.created_at)+'</small>\
           </h4>\
           <p>'+htmlifyLinks(tweet.text)+'</p>\
@@ -93,11 +96,39 @@ $( document ).ready(function() {
     })
     .on('data', function(tweet) {
       console.log(tweet);
-      $('#waiting-msg').hide('fast');
-      tweet.rank = 0;
-      var newTweet = $('<div></div>');
-      newTweet.html(formatTweet(tweet));
-      theList.prepend(newTweet);
+      // add this to the list of top retweets if:
+      // - this tweet is not already in the list AND
+      // - we do not have the maximum number of top retweets desired yet OR
+      // - this tweet has more retweets than the lowest ranked tweet
+      var existingTweet = _.findWhere(topTweets, {tweet_id: tweet.tweet_id});
+      var newTweet      = false;
+      if (existingTweet !== undefined) {
+        // just update the count for this tweet
+        existingTweet.retweet_count = tweet.retweet_count;
+        $('#tweet-'+tweet.tweet_id).find('.rtcount').html(tweet.retweet_count.toLocaleString()+' RTs').fadeIn('fast');
+      } else {
+        if (topTweets.length < topRetweetLimit) {
+          topTweets.push(tweet);
+          newTweet = true;
+        } else if (tweet.retweet_count > retweetThreshold) {
+          retweetThreshold = tweet.retweet_count;
+          topTweets.push(tweet);
+          newTweet = true;
+        } else {
+          // ignore this tweet
+        }
+      }
+
+      // trim and re-order the list
+      //_.sortBy(topTweets, 'retweet_count')
+
+      if (newTweet === true) {
+        $('#waiting-msg').hide('fast', function () {
+          newTweet = $('<div></div>');
+          newTweet.html(formatTweet(tweet));
+          theList.prepend(newTweet);
+        });
+      }
     })
     .on('connect', function() {
       console.log('Socket connected!');

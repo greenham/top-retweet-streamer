@@ -31,17 +31,17 @@ MongoClient.connect(config.db.host, function (err, db) {
   console.log('Attempting connection to "' + config.db.host + '"');
   if (err) {
     console.error('Unable to connect to database: ' + err);
-    process.exit();
+    process.exit(1);
   }
 
   db.collection(config.db.collection, function (err, collection) {
     collection.isCapped(function (err, capped) {
       if (err) {
-        console.log('Error detecting if \'' + config.db.collection + '\' is a capped collection.');
+        console.error('Error detecting if "'+config.db.collection+'" is a capped collection. Aborting.');
         process.exit(1);
       }
       if (!capped) {
-        console.log(collection.collectionName + ' is not a capped collection. Aborting. Please use a capped collection for tailable cursors.');
+        console.error('"'+config.db.collection+'" is not a capped collection. Aborting.');
         process.exit(2);
       }
       console.log('Successfully connected to database.');
@@ -72,13 +72,12 @@ function feedClient(socket, collection) {
   var rtstream = false;
   socket
     .on('filter', function (data, callback) {
-      handleFilter(socket, collection, data, function(err, stream) {
+      handleFilter(socket, collection, data.query, function(err, stream) {
         rtstream = stream;
         callback(err);
       });
     })
     .on('disconnect', function () {
-      // @todo stop the stream for this client if necessary
       if (rtstream !== false) {
         console.log('Client disconnected. Stopping stream...');
         rtstream.destroy();
@@ -86,9 +85,10 @@ function feedClient(socket, collection) {
     });
 }
 
-function handleFilter(socket, collection, data, callback) {
-  var filterQuery   = data.query,
-      validCallback = (callback && typeof callback === "function");
+function handleFilter(socket, collection, filterQuery, callback) {
+  if (!callback || typeof callback !== "function") {
+    throw new Error('callback is required');
+  }
 
   console.log('Received search request from client: ' + filterQuery);
 
@@ -97,7 +97,6 @@ function handleFilter(socket, collection, data, callback) {
       rtQuery     = {query: queryRegExp},
       rtFields    = {},
       rtOpts      = {
-        limit: config.top_retweets_limit,
         sort: [['$natural', 1]],
         tailable: true,
         tailableRetryInterval: 1000,
@@ -119,12 +118,12 @@ function handleFilter(socket, collection, data, callback) {
     }
   });
 
-  // start listening to the live Twitter stream and populate the DB
+  // start listening to the live Twitter stream and populating the DB
   var twit = new twitter(config.twitter);
   twit.stream('statuses/filter', {'track':filterQuery}, function(stream) {
     stream
       .on('data', function (tweet) {
-        // only consider a status if it's been retweeted
+        // only consider a status if it's actually been retweeted
         if (tweet.retweeted_status && tweet.retweeted_status.retweet_count > 0) {
           var newTweet = {
             query:             filterQuery,
@@ -135,8 +134,8 @@ function handleFilter(socket, collection, data, callback) {
             text:              tweet.retweeted_status.text,
             created_at:        new Date(tweet.retweeted_status.created_at)
           };
-          // create new tweet or update existing with new data
-          retweets.update({tweet_id: tweet.retweeted_status.id_str}, newTweet, {upsert: true}, function(err, result) {
+          // add to collection
+          retweets.insert(newTweet, function(err, result) {
             if (err) {
               console.error(err);
             }
