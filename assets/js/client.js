@@ -95,40 +95,45 @@ $( document ).ready(function() {
       $.pnotify({title: 'Error', text: 'Could not connect to server!', type: 'error'});
     })
     .on('data', function(tweet) {
-      console.log(tweet);
       // add this to the list of top retweets if:
       // - this tweet is not already in the list AND
       // - we do not have the maximum number of top retweets desired yet OR
       // - this tweet has more retweets than the lowest ranked tweet
       var existingTweet = _.findWhere(topTweets, {tweet_id: tweet.tweet_id});
-      var newTweet      = false;
       if (existingTweet !== undefined) {
         // just update the count for this tweet
         existingTweet.retweet_count = tweet.retweet_count;
-        $('#tweet-'+tweet.tweet_id).find('.rtcount').html(tweet.retweet_count.toLocaleString()+' RTs').fadeIn('fast');
+        $('#tweet-'+tweet.tweet_id).find('.rtcount').fadeOut('fast', function () {
+          $(this).html(tweet.retweet_count.toLocaleString()+' RTs').fadeIn('fast');
+        });
+        return null;
       } else {
         if (topTweets.length < topRetweetLimit) {
           topTweets.push(tweet);
-          newTweet = true;
         } else if (tweet.retweet_count > retweetThreshold) {
           retweetThreshold = tweet.retweet_count;
           topTweets.push(tweet);
-          newTweet = true;
         } else {
           // ignore this tweet
+          return null;
         }
       }
 
       // trim and re-order the list
-      //_.sortBy(topTweets, 'retweet_count')
+      topTweets = _.sortBy(topTweets, 'retweet_count').reverse().slice(0,9);
 
-      if (newTweet === true) {
-        $('#waiting-msg').hide('fast', function () {
-          newTweet = $('<div></div>');
-          newTweet.html(formatTweet(tweet));
-          theList.prepend(newTweet);
+      $('#waiting-msg').hide('fast', function () {
+        theList.fadeOut('slow', function () {
+          theList.html('');
+          for (var i = 0; i < topTweets.length; i++) {
+            topTweets[i].rank = i+1;
+            newTweet = $('<div></div>');
+            newTweet.html(formatTweet(topTweets[i]));
+            theList.append(newTweet);
+          }
+          theList.fadeIn('slow');
         });
-      }
+      });
     })
     .on('connect', function() {
       console.log('Socket connected!');
