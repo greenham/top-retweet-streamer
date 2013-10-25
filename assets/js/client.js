@@ -113,8 +113,7 @@ $( document ).ready(function() {
           console.log('Received new tweet, list is not full yet, pushing...');
           topTweets.push(tweet);
         } else if (tweet.retweet_count > retweetThreshold) {
-          console.log('Received new tweet, more RTs ('+tweet.retweet_count+') than threshold ('+retweetThreshold+'), pushing and updating threshold...');
-          retweetThreshold = tweet.retweet_count;
+          console.log('Received new tweet, more RTs ('+tweet.retweet_count+') than threshold ('+retweetThreshold+'), pushing...');
           topTweets.push(tweet);
         } else {
           // ignore this tweet
@@ -124,6 +123,9 @@ $( document ).ready(function() {
 
       // trim and re-order the list
       topTweets = _.sortBy(topTweets, 'retweet_count').reverse().slice(0,10);
+      // update the threshold to the count of the lowest ranked tweet, not this one
+      retweetThreshold = topTweets[topTweets.length-1].retweet_count;
+      console.log('New threshold is ' + retweetThreshold);
 
       $('#waiting-msg').hide('fast', function () {
         theList.fadeOut('slow', function () {

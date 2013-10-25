@@ -98,6 +98,7 @@ function handleFilter(socket, collection, filterQuery, callback) {
       rtFields    = {},
       rtOpts      = {
         sort: [['$natural', 1]],
+        limit: 10,
         tailable: true,
         tailableRetryInterval: 1000,
         numberOfRetries: 1000
