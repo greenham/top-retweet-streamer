@@ -102,6 +102,7 @@ $( document ).ready(function() {
       var existingTweet = _.findWhere(topTweets, {tweet_id: tweet.tweet_id});
       if (existingTweet !== undefined) {
         // just update the count for this tweet
+        console.log('Received existing tweet, updating RT count...');
         existingTweet.retweet_count = tweet.retweet_count;
         $('#tweet-'+tweet.tweet_id).find('.rtcount').fadeOut('fast', function () {
           $(this).html(tweet.retweet_count.toLocaleString()+' RTs').fadeIn('fast');
@@ -109,8 +110,10 @@ $( document ).ready(function() {
         return null;
       } else {
         if (topTweets.length < topRetweetLimit) {
+          console.log('Received new tweet, list is not full yet, pushing...');
           topTweets.push(tweet);
         } else if (tweet.retweet_count > retweetThreshold) {
+          console.log('Received new tweet, more RTs ('+tweet.retweet_count+') than threshold ('+retweetThreshold+'), pushing and updating threshold...');
           retweetThreshold = tweet.retweet_count;
           topTweets.push(tweet);
         } else {
@@ -120,7 +123,7 @@ $( document ).ready(function() {
       }
 
       // trim and re-order the list
-      topTweets = _.sortBy(topTweets, 'retweet_count').reverse().slice(0,9);
+      topTweets = _.sortBy(topTweets, 'retweet_count').reverse().slice(0,10);
 
       $('#waiting-msg').hide('fast', function () {
         theList.fadeOut('slow', function () {
