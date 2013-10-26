@@ -122,11 +122,16 @@ $( document ).ready(function() {
       }
 
       // trim and re-order the list
-      topTweets = _.sortBy(topTweets, 'retweet_count').reverse().slice(0,10);
-      // update the threshold to the count of the lowest ranked tweet, not this one
-      retweetThreshold = topTweets[topTweets.length-1].retweet_count;
-      console.log('New threshold is ' + retweetThreshold);
+      topTweets = _.sortBy(topTweets, 'retweet_count').reverse().slice(0,topRetweetLimit);
 
+      // update the threshold to the count of the lowest ranked tweet if the list is full
+      if (topTweets.length === topRetweetLimit) {
+        retweetThreshold = topTweets[topTweets.length-1].retweet_count;
+        console.log('New threshold is ' + retweetThreshold);
+        socket.emit('set threshold', retweetThreshold);
+      }
+
+      // @todo only refresh the entire view if the order has changed
       $('#waiting-msg').hide('fast', function () {
         theList.fadeOut('slow', function () {
           theList.html('');

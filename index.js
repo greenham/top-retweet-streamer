@@ -62,7 +62,9 @@ function startIOServer(collection) {
 
   // handle socket connections
   io.sockets.on('connection', function (socket) {
-    feedClient(socket, collection);
+    socket.set('threshold', 0, function () {
+      feedClient(socket, collection);
+    });
   });
 
   console.log("Socket server started...");
@@ -76,6 +78,9 @@ function feedClient(socket, collection) {
         rtstream = stream;
         callback(err);
       });
+    })
+    .on('set threshold', function (threshold) {
+      socket.set('threshold', threshold);
     })
     .on('disconnect', function () {
       if (rtstream !== false) {
@@ -109,8 +114,7 @@ function handleFilter(socket, collection, filterQuery, callback) {
     if (!err) {
       tweets.intervalEach(300, function (err, tweet) {
         if (tweet !== null) {
-          console.dir(tweet);
-          console.log('Received tweet for \''+filterQuery+'\'. Sending to client...');
+          //console.log('Received tweet for \''+filterQuery+'\'. Sending to client...');
           socket.emit('data', tweet);
         }
       });
@@ -124,24 +128,39 @@ function handleFilter(socket, collection, filterQuery, callback) {
   twit.stream('statuses/filter', {'track':filterQuery}, function(stream) {
     stream
       .on('data', function (tweet) {
-        // only consider a status if it's actually been retweeted
-        if (tweet.retweeted_status && tweet.retweeted_status.retweet_count > 0) {
-          var newTweet = {
-            query:             filterQuery,
-            tweet_id:          tweet.retweeted_status.id_str,
-            screen_name:       tweet.retweeted_status.user.screen_name,
-            profile_image_url: tweet.retweeted_status.user.profile_image_url,
-            retweet_count:     tweet.retweeted_status.retweet_count,
-            text:              tweet.retweeted_status.text,
-            created_at:        new Date(tweet.retweeted_status.created_at)
-          };
-          // add to collection
-          retweets.insert(newTweet, function(err, result) {
-            if (err) {
-              console.error(err);
+        // only consider a status if it's been retweeted more than the current threshold set for the client
+        socket.get('threshold', function (err, threshold) {
+          if (tweet.retweeted_status && tweet.retweeted_status.retweet_count > threshold) {
+            // and was originally tweeted in the last 24 hours
+            var ts = Math.round(new Date().getTime() / 1000);
+            var tsYesterday = ts - (24 * 3600);
+            var tweetDate = new Date(tweet.retweeted_status.created_at);
+            var tsTweet = Math.round(tweetDate.getTime() / 1000);
+
+            if (tsTweet >= tsYesterday) {
+              var newTweet = {
+                query:             filterQuery,
+                tweet_id:          tweet.retweeted_status.id_str,
+                screen_name:       tweet.retweeted_status.user.screen_name,
+                profile_image_url: tweet.retweeted_status.user.profile_image_url,
+                retweet_count:     tweet.retweeted_status.retweet_count,
+                text:              tweet.retweeted_status.text,
+                created_at:        tweetDate
+              };
+              // add to collection
+              retweets.insert(newTweet, function(err, result) {
+                if (err) {
+                  console.error(err);
+                }
+                //console.log('Tweet added');
+              });
+            } else {
+              //console.log('This tweet is too old!');
             }
-          });
-        }
+          } else {
+            //console.log('This tweet does not meet the threshold of ' + threshold + '!');
+          }
+        });
       })
       .on('error', function(e) {
         stream.destroy();
