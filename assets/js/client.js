@@ -101,12 +101,14 @@ $( document ).ready(function() {
       // - this tweet has more retweets than the lowest ranked tweet
       var existingTweet = _.findWhere(topTweets, {tweet_id: tweet.tweet_id});
       if (existingTweet !== undefined) {
-        // just update the count for this tweet
-        console.log('Received existing tweet, updating RT count...');
-        existingTweet.retweet_count = tweet.retweet_count;
-        $('#tweet-'+tweet.tweet_id).find('.rtcount').fadeOut('fast', function () {
-          $(this).html(tweet.retweet_count.toLocaleString()+' RTs').fadeIn('fast');
-        });
+        // just update the count for this tweet (but only if it's an increase)
+        if (existingTweet.retweet_count < tweet.retweet_count) {
+          console.log('Received existing tweet, updating RT count...');
+          existingTweet.retweet_count = tweet.retweet_count;
+          $('#tweet-'+tweet.tweet_id).find('.rtcount').fadeOut('fast', function () {
+            $(this).html(tweet.retweet_count.toLocaleString()+' RTs').fadeIn('fast');
+          });
+        }
         return null;
       } else {
         if (topTweets.length < topRetweetLimit) {

@@ -114,7 +114,7 @@ function handleFilter(socket, collection, filterQuery, callback) {
     if (!err) {
       tweets.intervalEach(300, function (err, tweet) {
         if (tweet !== null) {
-          //console.log('Received tweet for \''+filterQuery+'\'. Sending to client...');
+          console.log('Received tweet for \''+filterQuery+'\'. Sending to client...');
           socket.emit('data', tweet);
         }
       });
