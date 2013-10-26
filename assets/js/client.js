@@ -1,9 +1,12 @@
 $( document ).ready(function() {
-  var socket     = io.connect('http://localhost'),
+  var socket = io.connect('http://localhost'),
       rtDiv      = $('#rt-container'),
       theList    = rtDiv.find('#rt-list'),
       searchForm = $('#search-form'),
-      searchTerm = false;
+      searchTerm = false,
+      topTweets  = [],
+      retweetThreshold = 0,
+      topRetweetLimit = 10;
 
   var formatTweet = function(tweet) {
     var profileUrl = 'https://twitter.com/'+tweet.screen_name,
@@ -20,8 +23,8 @@ $( document ).ready(function() {
         <div class="media-body">\
           <h4 class="media-heading">\
             <a href="'+profileUrl+'" target="_blank">@'+tweet.screen_name+'</a>\
-            <span class="badge badge-success">'+tweet.retweet_count.toLocaleString()+' RTs</span>\
-            <small class="pull-right muted" title="'+tweet.created_at+'">'+prettyDate(tweet.created_at)+'</small>\
+            <span class="badge badge-success rtcount">'+tweet.retweet_count.toLocaleString()+' RTs</span>\
+            <small class="pull-right muted" title="'+tweet.created_at.toLocaleString()+'">'+prettyDate(tweet.created_at)+'</small>\
           </h4>\
           <p>'+htmlifyLinks(tweet.text)+'</p>\
         </div>\
@@ -91,6 +94,59 @@ $( document ).ready(function() {
       searchForm.find('button').removeClass('btn-success').attr('disabled', true);
       $.pnotify({title: 'Error', text: 'Could not connect to server!', type: 'error'});
     })
+    .on('data', function(tweet) {
+      // add this to the list of top retweets if:
+      // - this tweet is not already in the list AND
+      // - we do not have the maximum number of top retweets desired yet OR
+      // - this tweet has more retweets than the lowest ranked tweet
+      var existingTweet = _.findWhere(topTweets, {tweet_id: tweet.tweet_id});
+      if (existingTweet !== undefined) {
+        // just update the count for this tweet (but only if it's an increase)
+        if (existingTweet.retweet_count < tweet.retweet_count) {
+          console.log('Received existing tweet, updating RT count...');
+          existingTweet.retweet_count = tweet.retweet_count;
+          $('#tweet-'+tweet.tweet_id).find('.rtcount').fadeOut('fast', function () {
+            $(this).html(tweet.retweet_count.toLocaleString()+' RTs').fadeIn('fast');
+          });
+        }
+        // @todo update rankings if necessary
+      } else {
+        if (topTweets.length < topRetweetLimit) {
+          console.log('Received new tweet, list is not full yet, pushing...');
+          topTweets.push(tweet);
+        } else if (tweet.retweet_count > retweetThreshold) {
+          console.log('Received new tweet, more RTs ('+tweet.retweet_count+') than threshold ('+retweetThreshold+'), pushing...');
+          topTweets.push(tweet);
+        } else {
+          // ignore this tweet
+          return null;
+        }
+      }
+
+      // trim and re-order the list
+      topTweets = _.sortBy(topTweets, 'retweet_count').reverse().slice(0,topRetweetLimit);
+
+      // update the threshold to the count of the lowest ranked tweet if the list is full
+      if (topTweets.length === topRetweetLimit) {
+        retweetThreshold = topTweets[topTweets.length-1].retweet_count;
+        console.log('New threshold is ' + retweetThreshold);
+        socket.emit('set threshold', retweetThreshold);
+      }
+
+      // @todo only refresh the entire view if the order has changed
+      $('#waiting-msg').hide('fast', function () {
+        theList.fadeOut('slow', function () {
+          theList.html('');
+          for (var i = 0; i < topTweets.length; i++) {
+            topTweets[i].rank = i+1;
+            newTweet = $('<div></div>');
+            newTweet.html(formatTweet(topTweets[i]));
+            theList.append(newTweet);
+          }
+          theList.fadeIn('slow');
+        });
+      });
+    })
     .on('connect', function() {
       console.log('Socket connected!');
     })
@@ -141,28 +197,5 @@ $( document ).ready(function() {
     .on('message', function(msg) {
       console.log(msg);
       $.pnotify({title: 'Notification', text: msg});
-    })
-    .on('nodata', function() {
-      theList.fadeOut('fast', function() {
-        theList.html('No retweets found yet... please wait... <img src="/assets/img/ajax-loader.gif">');
-        theList.fadeIn();
-      });
-    })
-    .on('data', function(tweets) {
-      theList.fadeOut('fast', function() {
-        theList.html('');
-        if (tweets.length > 0) {
-            $.each(tweets, function(index, tweet) {
-              tweet.rank = index+1;
-              var newTweet = $('<div></div>');
-              newTweet.html(formatTweet(tweet));
-              theList.append(newTweet);
-            });
-        } else {
-          // @note this shouldn't happen on this event (see 'nodata'), but... just in case
-          theList.html('No retweets found yet... please wait... <img src="/assets/img/ajax-loader.gif">');
-        }
-        theList.fadeIn();
-      });
     });
 });
