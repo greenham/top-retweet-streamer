@@ -24,7 +24,7 @@ $( document ).ready(function() {
           <h4 class="media-heading">\
             <a href="'+profileUrl+'" target="_blank">@'+tweet.screen_name+'</a>\
             <span class="badge badge-success rtcount">'+tweet.retweet_count.toLocaleString()+' RTs</span>\
-            <small class="pull-right muted" title="'+tweet.created_at+'">'+prettyDate(tweet.created_at)+'</small>\
+            <small class="pull-right muted" title="'+tweet.created_at.toLocaleString()+'">'+prettyDate(tweet.created_at)+'</small>\
           </h4>\
           <p>'+htmlifyLinks(tweet.text)+'</p>\
         </div>\
@@ -109,7 +109,7 @@ $( document ).ready(function() {
             $(this).html(tweet.retweet_count.toLocaleString()+' RTs').fadeIn('fast');
           });
         }
-        return null;
+        // @todo update rankings if necessary
       } else {
         if (topTweets.length < topRetweetLimit) {
           console.log('Received new tweet, list is not full yet, pushing...');

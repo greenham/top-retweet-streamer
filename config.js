@@ -1,10 +1,22 @@
 var config = {};
 
-config.db = {
-  host:       'mongodb://localhost:27017/retweets',
-  collection: 'rtscapped'
+config.tweets = {
+  recent_time_limit_hours:    24
 };
 
+config.db = {
+  host:       'mongodb://localhost:27017/retweets',
+  collection: 'rtstream'
+};
+
+/*config.twitter = {
+  consumer_key:        'YOUR-CONSUMER-KEY',
+  consumer_secret:     'YOUR-CONSUMER-SECRET',
+  access_token_key:    'YOUR-ACCESS-TOKEN-KEY',
+  access_token_secret: 'YOUR-ACCESS-TOKEN-SECRET'
+};*/
+// NOTE: This is just a random developer account which is limited to one connection
+// to the Streaming API at a time. It's highly recommended to change these to your own credentials.
 config.twitter = {
   consumer_key:        'gUdGG5cbw2VYfKipEkFpQg',
   consumer_secret:     'fnKnMO7ddRUrUrCRGh0aeMR6vqtLuM4gqoOY63ApQ70',

@@ -113,7 +113,7 @@ function handleFilter(socket, collection, filterQuery, callback) {
   retweets.find(rtQuery, rtFields, rtOpts, function (err, tweets) {
     if (!err) {
       tweets.intervalEach(300, function (err, tweet) {
-        if (tweet !== null) {
+        if (tweet !== null && tweet.tweet_id) {
           console.log('Received tweet for \''+filterQuery+'\'. Sending to client...');
           socket.emit('data', tweet);
         }
@@ -131,9 +131,9 @@ function handleFilter(socket, collection, filterQuery, callback) {
         // only consider a status if it's been retweeted more than the current threshold set for the client
         socket.get('threshold', function (err, threshold) {
           if (tweet.retweeted_status && tweet.retweeted_status.retweet_count > threshold) {
-            // and was originally tweeted in the last 24 hours
+            // and was originally tweeted within the configured timeframe
             var ts = Math.round(new Date().getTime() / 1000);
-            var tsYesterday = ts - (24 * 3600);
+            var tsYesterday = ts - (config.tweets.recent_time_limit_hours * 3600);
             var tweetDate = new Date(tweet.retweeted_status.created_at);
             var tsTweet = Math.round(tweetDate.getTime() / 1000);
 
