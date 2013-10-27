@@ -17,7 +17,6 @@ cd top-retweet-streamer
 npm install
 mongo localhost
 db.getSiblingDB('retweets').createCollection('rtstream', {capped: true, size: 100000});
-db.rtstream.insert({});
 ```
 
 Configuring

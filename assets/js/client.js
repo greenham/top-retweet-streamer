@@ -110,6 +110,7 @@ $( document ).ready(function() {
           });
         }
         // @todo update rankings if necessary
+        return null;
       } else {
         if (topTweets.length < topRetweetLimit) {
           console.log('Received new tweet, list is not full yet, pushing...');

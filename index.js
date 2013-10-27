@@ -186,8 +186,7 @@ MongoCursor.prototype.intervalEach = function(interval, callback) {
     throw new Error("callback is mandatory");
   }
 
-  if(this.state != MongoCursor.CLOSED) {
-    // FIX: stack overflow (on deep callback) (cred: https://github.com/limp/node-mongodb-native/commit/27da7e4b2af02035847f262b29837a94bbbf6ce2)
+  if(this.state !== MongoCursor.CLOSED) {
     setTimeout(function(){
       // fetch the next object until there are no more
       self.nextObject(function(err, item) {
