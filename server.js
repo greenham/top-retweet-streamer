@@ -152,7 +152,8 @@ var handleFilter = (socket, collection, filterQuery, callback) => {
       })
       .on('error', (e) => {
       	console.log('error from twitter streaming API', e);
-        stream.destroy();
+        console.log(e.source);
+        //stream.destroy();
       })
       .on('end', (res) => {
       	//console.log('twitter streaming API stream ended');
