@@ -1,25 +1,21 @@
 {
-  "name": "top-retweet-streamer",
-  "version": "0.0.1",
-  "description": "A Twitter top 10 retweets streamer.",
-  "main": "index.js",
-  "dependencies": {
-    "mime": "~1.2.11",
-    "mongodb": "~1.3.19",
-    "ntwitter": "~0.5.0",
-    "socket.io": "^2.2.0"
-  },
-  "devDependencies": {},
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/greenham/top-retweet-streamer.git"
-  },
-  "author": "",
-  "license": "BSD-2-Clause",
-  "bugs": {
-    "url": "https://github.com/greenham/top-retweet-streamer/issues"
-  }
+ "name": "top-rt-stream",
+ "version": "0.1.1",
+ "description": "A live stream of the top 10 retweets for a given Twitter search.",
+ "dependencies": {
+  "express": "^4.16.4",
+  "lodash": "^4.17.11",
+  "mongodb": "^3.1.10",
+  "socket.io": "^2.2.0",
+  "twitter": "^1.7.1"
+ },
+ "repository": {
+  "type": "git",
+  "url": "git://github.com/greenham/top-retweet-streamer.git"
+ },
+ "author": "greenham",
+ "license": "BSD-2-Clause",
+ "bugs": {
+  "url": "https://github.com/greenham/top-retweet-streamer/issues"
+ }
 }

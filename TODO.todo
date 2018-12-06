@@ -1,0 +1,4 @@
+ ☐ Create new UI using React
+ ☐ Update to latest bootstrap
+ ☐ When receiving a search request, do initial poll+populate on the database instead of twitter
+ ☐ Support multiple feeds of queries

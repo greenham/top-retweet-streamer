@@ -1,5 +1,5 @@
 $( document ).ready(function() {
-  var socket = io.connect('http://localhost'),
+  var socket     = io(),
       rtDiv      = $('#rt-container'),
       theList    = rtDiv.find('#rt-list'),
       searchForm = $('#search-form'),
@@ -85,16 +85,12 @@ $( document ).ready(function() {
   $.pnotify.defaults.nonblock = true;
 
   socket
-    .on('connecting', function() {
-      console.log('Connecting to socket...');
-      searchForm.find('button').addClass('btn-success').removeAttr('disabled');
-    })
     .on('connect_failed', function() {
       console.error('Connection to socket failed!');
       searchForm.find('button').removeClass('btn-success').attr('disabled', true);
       $.pnotify({title: 'Error', text: 'Could not connect to server!', type: 'error'});
     })
-    .on('data', function(tweet) {
+    .on('data', (tweet) => {
       // add this to the list of top retweets if:
       // - this tweet is not already in the list AND
       // - we do not have the maximum number of top retweets desired yet OR
@@ -150,6 +146,7 @@ $( document ).ready(function() {
     })
     .on('connect', function() {
       console.log('Socket connected!');
+      searchForm.find('button').addClass('btn-success').removeAttr('disabled');
     })
     .on('disconnect', function() {
       console.warn('Socket disconnected!');
