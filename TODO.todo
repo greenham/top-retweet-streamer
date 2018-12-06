@@ -1,3 +1,7 @@
+ ☐ Keep a state of what keywords are currently being tracked and update the twitter stream as necessary
+   - The twitter stream should be independent of the client socket connection
+   - This will allow multiple keywords to be tracked at once
+   - The client only needs to worry about being fed data from the tailable mongo cursor
  ☐ Create new UI using React
  ☐ Update to latest bootstrap
  ☐ When receiving a search request, do initial poll+populate on the database instead of twitter

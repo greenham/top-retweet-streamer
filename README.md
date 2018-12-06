@@ -22,11 +22,11 @@ db.getSiblingDB('retweets').createCollection('rtstream', {capped: true, size: 10
 Configuring
 -----------
 
-Configuration items can be found in [https://github.com/greenham/top-retweet-streamer/blob/master/config.js](config.js), most notably:
+Configuration items can be found in [config.js](https://github.com/greenham/top-retweet-streamer/blob/master/config.js), most notably:
 
 1. **Twitter API credentials**
 
-You need a Twitter account and a [https://dev.twitter.com/apps](developer application) to get these credentials.
+You need a Twitter account and a [developer application](https://dev.twitter.com/apps) to get these credentials.
 
 ```
 config.twitter = {
@@ -50,9 +50,6 @@ config.tweets = {
 Running
 -------
 
-`node index.js`
+`node server.js`
 
 Access via web browser: [http://localhost:3000](http://localhost:3000)
-
-![Search interface](http://screencloud.net/img/screenshots/81b6b630472487834b231b6289874769.png)
-![Top RT board](http://screencloud.net/img/screenshots/aca81a016c6eb4e0056a905808d78edf.png)

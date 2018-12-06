@@ -1,29 +1,15 @@
-var express = require('express');
-var app = express();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
-var twitter = require('twitter');
-var _ = require('lodash');
-var mongodb = require('mongodb');
-var MongoClient = mongodb.MongoClient;
-var MongoCursor = mongodb.Cursor;
-
-var config = {
-	port: 3000,
-	db: {
-		host: "mongodb://127.0.0.1:27017",
-  	db: "retweets",
-  	collection: "rtstream"
-	},
-	twitter: {
-	  consumer_key: "gUdGG5cbw2VYfKipEkFpQg",
-	  consumer_secret: "fnKnMO7ddRUrUrCRGh0aeMR6vqtLuM4gqoOY63ApQ70",
-	  access_token_key: "1963789585-njzp3nBKbD75doKnBlEv3F1sfAfTylI8VAVOjG6",
-	  access_token_secret: "rBYSdSNlfXZz5X7vWCtqtJlO1iCREJ3PwDpCa1GYw"
-	},
-	tweets: {
-		recent_time_limit_hours: 24
-	}
+var express       = require('express');
+var app           = express();
+var http          = require('http').Server(app);
+var io            = require('socket.io')(http);
+var twitter       = require('twitter');
+var _             = require('lodash');
+var mongodb       = require('mongodb');
+var MongoClient   = mongodb.MongoClient;
+var MongoCursor   = mongodb.Cursor;
+var config        = require('./config.json');
+var state         = {
+  trackedTerms: []
 };
 
 app.use(express.static('assets'));
@@ -85,7 +71,7 @@ var feedClient = (socket, collection) => {
     })
     .on('disconnect', function () {
       if (rtstream !== false) {
-        console.log('Client disconnected. Stopping stream...');
+        //console.log('Client disconnected. Stopping stream...');
         rtstream.destroy();
       } else {
       	//console.log('client disconnected, no stream to stop');
@@ -102,35 +88,27 @@ var handleFilter = (socket, collection, filterQuery, callback) => {
 
   var retweets    = collection,
       queryRegExp = new RegExp(filterQuery, 'i'),
-      rtQuery     = {query: queryRegExp},
+      rtQuery     = {"query": queryRegExp},
       rtOpts      = {
-        sort: [['$natural', 1]],
-        limit: 10,
+        sort: [['$natural', -1]],
+        limit: 1,
         tailable: true,
-        tailableRetryInterval: 1000,
-        numberOfRetries: 1000
+        awaitdata: true
       };
 
   // start tracking and emitting the top retweets for the connected client and requested filter
-  retweets.find(rtQuery, rtOpts, (err, tweets) => {
-    if (!err) {
-      tweets.intervalEach(300, (err, tweet) => {
-        if (tweet !== null && tweet.tweet_id) {
-          //console.log('Received tweet for \''+filterQuery+'\'. Sending to client...');
-          socket.emit('data', tweet);
-        }
-      });
-    } else {
-      console.error('Error tracking top retweets: ' + err);
+  tailCollection(retweets, rtQuery, (tweet) => {
+    if (tweet !== null && tweet.tweet_id) {
+      socket.emit('data', tweet);
     }
   });
 
   // start listening to the live Twitter stream and populating the DB
   var twit = new twitter(config.twitter);
-  twit.stream('statuses/filter', {track: filterQuery, language: 'en'}, (stream) => {
+  twit.stream('statuses/filter', {"track": filterQuery, "language": 'en'}, (stream) => {
   	let isTweet = false;
     stream
-      .on('data', function (tweet) {
+      .on('data', (tweet) => {
         // only consider a status if
         // 1. it's actually a retweet
         // 2. it's been retweeted more than the current threshold set for the client
@@ -177,48 +155,32 @@ var handleFilter = (socket, collection, filterQuery, callback) => {
         stream.destroy();
       })
       .on('end', (res) => {
-      	console.log('twitter streaming API stream ended');
+      	//console.log('twitter streaming API stream ended');
         stream.destroy();
       })
       .on('destroy', (res) => {
         // a 'silent' disconnection from Twitter, no end/error event fired
-      	console.log('twitter streaming API stream destroyed');
+      	//console.log('twitter streaming API stream destroyed');
       });
 
     callback(null, stream);
   });
 }
 
+var tailCollection = (collection, filter, next) => {
+  if ('function' !== typeof next) throw('Callback function not defined');
+
+  var cursorOptions = {
+    tailable: true,
+    awaitdata: true,
+    numberOfRetries: -1
+  };
+
+  var stream = collection.find(filter, cursorOptions).stream();
+
+  stream.on('data', next);
+}
+
 http.listen(config.port, () => {
 	console.log(`HTTP Server started on *:${config.port}`);
 });
-
-// takes an interval, waits that many ms before it makes the next object request
-MongoCursor.prototype.intervalEach = function(interval, callback) {
-  var self = this;
-  if (!callback) {
-    throw new Error("callback is mandatory");
-  }
-
-  if (this.state !== MongoCursor.CLOSED) {
-    setTimeout(() => {
-      // fetch the next object until there are no more
-      self.next((err, item) => {
-        if (err !== null) return callback(err, null);
-
-        if (item !== null) {
-          callback(null, item);
-          self.intervalEach(interval, callback);
-        } else {
-          // Close the cursor if done
-          self.state = MongoCursor.CLOSED;
-          callback(err, null);
-        }
-
-        item = null;
-      });
-    }, interval);
-  } else {
-    callback(new Error("Cursor is closed"), null);
-  }
-};
