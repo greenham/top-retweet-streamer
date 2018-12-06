@@ -1,6 +1,8 @@
 body {
+    background-color: #444;
     padding-top: 20px;
     padding-bottom: 40px;
+    color: #f0f0f0;
 }
 
 /* Main marketing message and sign up button */
@@ -18,6 +20,7 @@ body {
 }
 
 div.media {
+    background-color: #222;
     width: 45%;
     height: 80px;
     float: left;
