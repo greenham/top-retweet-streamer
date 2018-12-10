@@ -6,3 +6,4 @@
  ☐ Update to latest bootstrap
  ☐ When receiving a search request, do initial poll+populate on the database instead of twitter
  ☐ Support multiple feeds of queries
+ ☐ Support changing amount of tweets shown on client-side (dropdown with 10, 20, 50)
